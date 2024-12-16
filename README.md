@@ -76,6 +76,11 @@ The Code Collaboration Platform is a portfolio project designed to simulate a Gi
 
 ---
 
-#### **Current Version:** v0.01
+#### **Current Version:** v0.02
+
+Tables created in database and entities classes, repositories, services and controllers added in the project. Swagger ui added for testing API endpoints.
+
+
+#### v0.01
 
 Initialized the backend project with Spring Boot and configured the database by creating a new user and database and tested the jdbc connection by running the application.
