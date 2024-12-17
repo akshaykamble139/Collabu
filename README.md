@@ -76,7 +76,11 @@ The Code Collaboration Platform is a portfolio project designed to simulate a Gi
 
 ---
 
-#### **Current Version:** v0.02
+#### **Current Version:** v0.03
+
+Validation and exception handling added for APIs. Spring security used to add basic security for authentication and authorization to the application.
+
+#### v0.02
 
 Tables created in database and entities classes, repositories, services and controllers added in the project. Swagger ui added for testing API endpoints.
 

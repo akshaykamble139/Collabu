@@ -1,7 +1,10 @@
-INSERT INTO users (id, username, email, password) VALUES
-(1, 'john_doe', 'john@example.com', 'password123'),
-(2, 'jane_smith', 'jane@example.com', 'password456'),
-(3, 'alice_brown', 'alice@example.com', 'password789');
+INSERT INTO users (username, email, password) VALUES
+('john_doe', 'john@example.com', 'password123'),
+('jane_smith', 'jane@example.com', 'password456'),
+('alice_brown', 'alice@example.com', 'password789');
+
+INSERT INTO users (username, email, password, role)
+VALUES ('admin', 'admin@example.com', '$2a$12$/ZlYnSSHFIH/NJJMsze95ewBIcTyyVuX4v5SIHaxFFOW7Kt6rSiqe', 'ROLE_ADMIN');
 
 INSERT INTO repositories (id, name, description, user_id) VALUES
 (1, 'my-first-repo', 'This is my first repository.', 1),
