@@ -76,7 +76,11 @@ The Code Collaboration Platform is a portfolio project designed to simulate a Gi
 
 ---
 
-#### **Current Version:** v0.03
+#### **Current Version:** v0.04
+
+Project structure changed now, two separate folders for front end and back end. Added basic files to test login using axios to call API from front end. Also added CorsConfig file for back end to ignore the cors error.
+
+#### v0.03
 
 Validation and exception handling added for APIs. Spring security used to add basic security for authentication and authorization to the application. JWT used for stateless authentication to call the APIs
 
