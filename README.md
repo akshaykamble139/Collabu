@@ -76,7 +76,12 @@ The Code Collaboration Platform is a portfolio project designed to simulate a Gi
 
 ---
 
-#### **Current Version:** v0.04
+#### **Current Version:** v0.05
+
+Login, register, home and profile pages added in react with responsive UIs. Also tested the API integration by registering and logging in with new user credentials.
+
+
+#### v0.04
 
 Project structure changed now, two separate folders for front end and back end. Added basic files to test login using axios to call API from front end. Also added CorsConfig file for back end to ignore the cors error.
 

@@ -1,11 +1,11 @@
-// src/pages/LoginPage.js
+// src/pages/RegisterPage.js
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TextField, Button, Typography, Container, Box } from "@mui/material";
 import axios from "axios";
 
-const LoginPage = () => {
-  const [form, setForm] = useState({ username: "", password: "" });
+const RegisterPage = () => {
+  const [form, setForm] = useState({ username: "", email: "", password: "" });
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
@@ -16,12 +16,11 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://localhost:8080/collabu/api/auth/login", form);
-      localStorage.setItem("token", response.data); // Store JWT token
-      alert("Login successful!");
-      navigate("/dashboard"); // Redirect to Dashboard
+      await axios.post("http://localhost:8080/collabu/api/auth/register", form);
+      alert("Registration successful!");
+      navigate("/login");
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed. Please try again.");
+      setError(err.response?.data?.message || "Registration failed. Please try again.");
     }
   };
 
@@ -38,7 +37,7 @@ const LoginPage = () => {
         }}
       >
         <Typography variant="h4" component="h1" gutterBottom>
-          Login to Your Account
+          Create an Account
         </Typography>
         {error && (
           <Typography color="error" variant="body1" gutterBottom>
@@ -56,6 +55,16 @@ const LoginPage = () => {
             required
           />
           <TextField
+            label="Email"
+            name="email"
+            type="email"
+            fullWidth
+            margin="normal"
+            value={form.email}
+            onChange={handleChange}
+            required
+          />
+          <TextField
             label="Password"
             name="password"
             type="password"
@@ -66,7 +75,7 @@ const LoginPage = () => {
             required
           />
           <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 2 }}>
-            Login
+            Register
           </Button>
         </Box>
       </Box>
@@ -74,5 +83,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
-
+export default RegisterPage;
