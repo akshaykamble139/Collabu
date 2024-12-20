@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.akshay.Collabu.dto.RepositoryDTO;
 import com.akshay.Collabu.services.RepositoryService;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/repositories")
 public class RepositoryController {
@@ -28,7 +30,7 @@ public class RepositoryController {
     }
 
     @PostMapping
-    public ResponseEntity<RepositoryDTO> createRepository(@RequestBody RepositoryDTO repositoryDTO) {
+    public ResponseEntity<RepositoryDTO> createRepository(@RequestBody @Valid RepositoryDTO repositoryDTO) {
         RepositoryDTO createdRepo = repositoryService.createRepository(repositoryDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdRepo);
     }

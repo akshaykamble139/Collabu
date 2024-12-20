@@ -40,5 +40,22 @@ public class User {
 
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL)
     private List<Repository_> repositories;
+    
+    @Column(name = "profile_picture")
+    private String profilePicture;
 
+    @Column
+    private String bio;
+
+    @Column
+    private String location;
+
+    @Column
+    private String website;
+    
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+
+    @Column(name = "last_login")
+    private LocalDateTime lastLogin;    
 }

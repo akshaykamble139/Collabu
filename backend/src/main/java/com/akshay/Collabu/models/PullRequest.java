@@ -3,10 +3,9 @@ package com.akshay.Collabu.models;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-import org.hibernate.annotations.CreationTimestamp;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -16,30 +15,44 @@ import jakarta.persistence.Table;
 import lombok.Data;
 
 @Entity
-@Table(name = "commits")
+@Table(name = "pull_requests")
 @Data
-public class Commit {
+public class PullRequest {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false)
-    private String message;
+    private String title;
 
-    @CreationTimestamp
-    private LocalDateTime timestamp;
+    @Column
+    private String description;
 
-    @ManyToOne
+    @Column(nullable = false)
+    private String status = "open";
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "repository_id", nullable = false)
     private Repository_ repository;
-    
-    @ManyToOne
-    @JoinColumn(name = "branch_id", nullable = false)
-    private Branch branch;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_branch_id", nullable = false)
+    private Branch sourceBranch;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_branch_id", nullable = false)
+    private Branch targetBranch;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private User createdBy;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+    
+    @Column(name = "merged_at")
+    private LocalDateTime mergedAt;
 
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted = false;
@@ -48,13 +61,12 @@ public class Commit {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Commit commit = (Commit) o;
-        return Objects.equals(id, commit.id);
+        PullRequest that = (PullRequest) o;
+        return Objects.equals(id, that.id);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(id);
-    }    
+    }
 }
-
