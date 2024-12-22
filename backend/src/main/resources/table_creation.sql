@@ -109,16 +109,26 @@ CREATE TABLE `activity_logs` (
   `user_id` bigint NOT NULL,
   `action` varchar(255) NOT NULL,
   `timestamp` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `repository_id` bigint DEFAULT NULL,
+  `branch_id` bigint DEFAULT NULL,
+  `file_id` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`),
-  CONSTRAINT `activity_logs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-);
+  KEY `activity_logs_ibfk_2` (`repository_id`),
+  KEY `activity_logs_ibfk_3` (`branch_id`),
+  KEY `activity_logs_ibfk_4` (`file_id`),
+  CONSTRAINT `activity_logs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
+  CONSTRAINT `activity_logs_ibfk_2` FOREIGN KEY (`repository_id`) REFERENCES `repositories` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `activity_logs_ibfk_3` FOREIGN KEY (`branch_id`) REFERENCES `branches` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `activity_logs_ibfk_4` FOREIGN KEY (`file_id`) REFERENCES `files` (`id`) ON DELETE SET NULL
+)
 
 CREATE TABLE `stars` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `user_id` bigint NOT NULL,
   `repository_id` bigint NOT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_id` (`user_id`,`repository_id`),
   KEY `repository_id` (`repository_id`),

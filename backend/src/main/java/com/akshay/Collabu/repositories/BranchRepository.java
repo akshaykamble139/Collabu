@@ -9,6 +9,7 @@ import com.akshay.Collabu.models.Branch;
 
 @Repository
 public interface BranchRepository extends JpaRepository<Branch, Long> {
-    List<Branch> findByRepository_Id(Long repositoryId);
-    Branch findByRepository_IdAndIsDefaultTrue(Long repositoryId); // Find the default branch
+    List<Branch> findByRepositoryId(Long repositoryId);
+    Branch findByRepositoryIdAndIsDefaultTrue(Long repositoryId); // Find the default branch
+	boolean existsByRepositoryIdAndName(Long repositoryId ,String branchName);
 }

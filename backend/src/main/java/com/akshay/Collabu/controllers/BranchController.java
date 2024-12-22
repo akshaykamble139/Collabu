@@ -12,27 +12,26 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.akshay.Collabu.dto.FileDTO;
-import com.akshay.Collabu.services.FileService;
+import com.akshay.Collabu.dto.BranchDTO;
+import com.akshay.Collabu.services.BranchService;
 
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/files")
-public class FileController {
+@RequestMapping("/branches")
+public class BranchController {
     @Autowired
-    private FileService fileService;
+    private BranchService branchService;
 
     @GetMapping("/repository/{repositoryId}")
-    public ResponseEntity<List<FileDTO>> getFilesByRepositoryId(@PathVariable Long repositoryId) {
-        List<FileDTO> files = fileService.getFilesByRepositoryId(repositoryId);
-        return ResponseEntity.ok(files);
+    public ResponseEntity<List<BranchDTO>> getBranchesByRepositoryId(@PathVariable Long repositoryId) {
+        List<BranchDTO> branches = branchService.getBranchesByRepoId(repositoryId);
+        return ResponseEntity.ok(branches);
     }
 
     @PostMapping
-    public ResponseEntity<FileDTO> createFile(@RequestBody @Valid FileDTO fileDTO) {
-        FileDTO createdFile = fileService.createFile(fileDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdFile);
+    public ResponseEntity<BranchDTO> createBranch(@RequestBody @Valid BranchDTO branchDTO) {
+        BranchDTO createdBranch = branchService.createBranch(branchDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdBranch);
     }
 }
-

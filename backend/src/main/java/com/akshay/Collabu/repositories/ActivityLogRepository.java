@@ -9,6 +9,7 @@ import com.akshay.Collabu.models.ActivityLog;
 
 @Repository
 public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> {
-    List<ActivityLog> findByUser_Id(Long userId);
+    List<ActivityLog> findByUserId(Long userId);
     List<ActivityLog> findByAction(String action); // Filter by action type
+    List<ActivityLog> findByRepositoryId(Long id);
 }

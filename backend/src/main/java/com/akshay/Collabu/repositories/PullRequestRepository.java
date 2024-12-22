@@ -9,7 +9,7 @@ import com.akshay.Collabu.models.PullRequest;
 
 @Repository
 public interface PullRequestRepository extends JpaRepository<PullRequest, Long> {
-    List<PullRequest> findByRepository_Id(Long repositoryId);
-    List<PullRequest> findByCreatedBy_Id(Long userId);
+    List<PullRequest> findByRepositoryId(Long repositoryId);
+    List<PullRequest> findByCreatedById(Long userId);
     List<PullRequest> findByStatus(String status); // Fetch by open, closed, merged status
 }

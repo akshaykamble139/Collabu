@@ -20,7 +20,7 @@ public class RepositoryService {
     private UserRepository userRepository;
 
     public List<RepositoryDTO> getRepositoriesByUserId(Long userId) {
-        List<Repository_> repositories = repositoryRepository.findByOwner_Id(userId);
+        List<Repository_> repositories = repositoryRepository.findByOwnerId(userId);
         return repositories.stream()
                 .map(repo -> new RepositoryDTO(
                 		repo.getId(), 
@@ -31,6 +31,19 @@ public class RepositoryService {
                         repo.getForksCount() != null,
                         repo.getForkedFrom() != null ? repo.getForkedFrom().getId() : null))
                 .collect(Collectors.toList());
+    }
+    
+    public RepositoryDTO getRepositoryById(Long id) {
+        Repository_ repo = repositoryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Repository not found"));
+        return new RepositoryDTO(
+        		repo.getId(), 
+        		repo.getName(), 
+        		repo.getDescription(), 
+        		repo.getOwner().getId(), 
+        		repo.getVisibility().equals("public"),
+                repo.getForksCount() != null,
+                repo.getForkedFrom() != null ? repo.getForkedFrom().getId() : null);
     }
 
     public RepositoryDTO createRepository(RepositoryDTO repositoryDTO) {

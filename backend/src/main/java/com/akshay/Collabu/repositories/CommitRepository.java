@@ -9,6 +9,6 @@ import com.akshay.Collabu.models.Commit;
 
 @Repository
 public interface CommitRepository extends JpaRepository<Commit, Long> {
-    List<Commit> findByRepository_Id(Long repositoryId);
-    List<Commit> findByBranch_Id(Long branchId);
+    List<Commit> findByRepositoryId(Long repositoryId);
+    List<Commit> findByBranchId(Long branchId);
 }

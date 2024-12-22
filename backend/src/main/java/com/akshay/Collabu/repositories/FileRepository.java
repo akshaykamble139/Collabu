@@ -9,7 +9,7 @@ import com.akshay.Collabu.models.File;
 
 @Repository
 public interface FileRepository extends JpaRepository<File, Long> {
-    List<File> findByRepository_Id(Long repositoryId);
+    List<File> findByRepositoryId(Long repositoryId);
     List<File> findByType(String type); // Fetch files or directories
     boolean existsByNameAndPathAndRepositoryId(String name, String path, Long repositoryId);
 }

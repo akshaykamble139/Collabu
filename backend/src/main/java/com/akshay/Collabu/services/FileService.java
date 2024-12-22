@@ -22,10 +22,16 @@ public class FileService {
     private RepositoryRepository repositoryRepository;
 
     public List<FileDTO> getFilesByRepositoryId(Long repositoryId) {
-        List<File> files = fileRepository.findByRepository_Id(repositoryId);
+        List<File> files = fileRepository.findByRepositoryId(repositoryId);
         return files.stream()
                 .map(file -> new FileDTO(file.getId(), file.getName(), file.getContent(), file.getPath(), file.getType(), file.getRepository().getId()))
                 .collect(Collectors.toList());
+    }
+    
+    public FileDTO getFileById(Long id) {
+        File file = fileRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("File not found"));
+        return new FileDTO(file.getId(), file.getName(), file.getContent(), file.getPath(), file.getType(), file.getRepository().getId());
     }
 
     public FileDTO createFile(FileDTO fileDTO) {
@@ -48,7 +54,7 @@ public class FileService {
         file.setPath(fileDTO.getPath()); // Set the file's path
         file.setRepository(repository);  // Associate the file with the repository
         file.setLastModifiedAt(LocalDateTime.now()); // Optional: if metadata exists
-
+        file.setType(fileDTO.getType());
         // Save the file to the database
         File savedFile = fileRepository.save(file);
 
@@ -65,7 +71,8 @@ public class FileService {
         fileRepository.deleteById(id);
     }
 
-    public FileDTO updateFile(Long id, FileDTO fileDTO) {
+    public FileDTO updateFile(FileDTO fileDTO) {
+    	Long id = fileDTO.getId();
         File file = fileRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("File not found"));
         file.setName(fileDTO.getName());

@@ -76,7 +76,11 @@ The Code Collaboration Platform is a portfolio project designed to simulate a Gi
 
 ---
 
-#### **Current Version:** v0.06
+#### **Current Version:** v0.07
+
+Remaining service classes added and API endpoints added for all table entities in new controllers.
+
+#### v0.06
 
 Database tables modified and new tables added to enhance the application's storage, scope and functionality. Entity classes, DTOs, DAO interfaces, main service classes updated.
 
