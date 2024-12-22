@@ -53,7 +53,7 @@ public class PullRequestService {
     	pullRequest.setTitle(pullRequestDTO.getTitle());
     	
     	if (pullRequestDTO.getDescription() != null && !pullRequestDTO.getDescription().isBlank()) {
-    		pullRequest.setTitle(pullRequestDTO.getTitle());
+    		pullRequest.setDescription(pullRequestDTO.getDescription());
     	}
     	
     	try {

@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.akshay.Collabu.dto.UserDTO;
-import com.akshay.Collabu.repositories.UserRepository;
 import com.akshay.Collabu.services.CustomUserDetailsService;
 import com.akshay.Collabu.services.UserService;
 import com.akshay.Collabu.utils.JwtUtils;
