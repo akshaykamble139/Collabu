@@ -1,14 +1,22 @@
 // src/pages/RegisterPage.js
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TextField, Button, Typography, Container, Box } from "@mui/material";
-import axios from "axios";
+import instance from "../services/axiosConfig";
+import { useDispatch, useSelector } from "react-redux";
 
 const RegisterPage = () => {
   const [form, setForm] = useState({ username: "", email: "", password: "" });
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
+  const userData = useSelector(state => state.user);
+
+  useEffect(() => {
+    if (userData !== null && userData.username !== "" && userData.token !== "") {
+      navigate("/");
+    }
+  }, [userData]);
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -16,11 +24,12 @@ const RegisterPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post("http://localhost:8080/collabu/api/auth/register", form);
+      await instance.post("/api/auth/register", form);
       alert("Registration successful!");
       navigate("/login");
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed. Please try again.");
+      navigate("/error", { state: { code: 400 } });
     }
   };
 

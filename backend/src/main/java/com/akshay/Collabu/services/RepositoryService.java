@@ -18,36 +18,33 @@ public class RepositoryService {
     
     @Autowired
     private UserRepository userRepository;
-
-    public List<RepositoryDTO> getRepositoriesByUserId(Long userId) {
-        List<Repository_> repositories = repositoryRepository.findByOwnerId(userId);
-        return repositories.stream()
-                .map(repo -> new RepositoryDTO(
-                		repo.getId(), 
-                		repo.getName(), 
-                		repo.getDescription(), 
-                		repo.getOwner().getId(), 
-                		repo.getVisibility().equals("public"),
-                        repo.getForksCount() != null,
-                        repo.getForkedFrom() != null ? repo.getForkedFrom().getId() : null))
-                .collect(Collectors.toList());
-    }
+    
+    @Autowired
+    private CacheService cacheService;
     
     public RepositoryDTO getRepositoryById(Long id) {
         Repository_ repo = repositoryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Repository not found"));
-        return new RepositoryDTO(
+        return mapEntityToDTO(repo);
+    }
+
+	private RepositoryDTO mapEntityToDTO(Repository_ repo) {
+		return new RepositoryDTO(
         		repo.getId(), 
         		repo.getName(), 
         		repo.getDescription(), 
-        		repo.getOwner().getId(), 
+        		repo.getOwner().getUsername(), 
         		repo.getVisibility().equals("public"),
                 repo.getForksCount() != null,
                 repo.getForkedFrom() != null ? repo.getForkedFrom().getId() : null);
-    }
+	}
 
     public RepositoryDTO createRepository(RepositoryDTO repositoryDTO) {
-    	Long ownerId = repositoryDTO.getOwnerId();
+    	Long ownerId = cacheService.getUserId(repositoryDTO.getOwnerUsername());
+    	
+    	if (ownerId == null) {
+            throw new RuntimeException("User id doesn't exist for this username");    		
+    	}
         // Check if a repository with the same name already exists for the user
         boolean exists = repositoryRepository.existsByNameAndOwnerId(repositoryDTO.getName(), ownerId);
         if (exists) {
@@ -66,20 +63,12 @@ public class RepositoryService {
         if (repositoryDTO.isForked() && repositoryDTO.getParentRepositoryId() != null) {
             Repository_ parentRepo = repositoryRepository.findById(repositoryDTO.getParentRepositoryId())
                 .orElseThrow(() -> new RuntimeException("Parent repository not found for forking."));
-            repository.setForkedFrom(repository);
+            repository.setForkedFrom(parentRepo);
         }
 
         // Save and return the created repository as DTO
         Repository_ savedRepo = repositoryRepository.save(repository);
-        return new RepositoryDTO(
-            savedRepo.getId(),
-            savedRepo.getName(),
-            savedRepo.getDescription(),
-            savedRepo.getOwner().getId(),
-            savedRepo.getVisibility().equals("public"),
-            savedRepo.getForksCount() != null,
-            savedRepo.getForkedFrom() != null ? savedRepo.getForkedFrom().getId() : null
-        );
+        return mapEntityToDTO(savedRepo);
     }
 
 
@@ -89,15 +78,7 @@ public class RepositoryService {
         repo.setName(repositoryDTO.getName());
         repo.setDescription(repositoryDTO.getDescription());
         Repository_ updatedRepo = repositoryRepository.save(repo);
-        return new RepositoryDTO(
-        		updatedRepo.getId(), 
-        		updatedRepo.getName(), 
-        		updatedRepo.getDescription(), 
-        		updatedRepo.getOwner().getId(),
-        		updatedRepo.getVisibility().equals("public"),
-                updatedRepo.getForksCount() != null,
-                updatedRepo.getForkedFrom() != null ? repo.getForkedFrom().getId() : null
-        		);
+        return mapEntityToDTO(updatedRepo);
     }
 
     public void deleteRepository(Long id) {
@@ -106,5 +87,28 @@ public class RepositoryService {
         }
         repositoryRepository.deleteById(id);
     }
+
+	public RepositoryDTO findByUsernameAndName(String username, String repoName) {
+    	Long ownerId = cacheService.getUserId(username);
+    	if (ownerId == null) {
+            throw new RuntimeException("User id doesn't exist for this username");    		
+    	}
+    	Repository_ repo = repositoryRepository.findByNameAndOwnerId(repoName, ownerId)
+                .orElseThrow(() -> new RuntimeException("Repository not found"));
+
+		return mapEntityToDTO(repo);
+	}
+
+	public List<RepositoryDTO> getRepositoriesByUserName(String userName) {
+		Long ownerId = cacheService.getUserId(userName);
+    	if (ownerId == null) {
+            throw new RuntimeException("User id doesn't exist for this username");    		
+    	}
+    	
+    	List<Repository_> repositories = repositoryRepository.findByOwnerId(ownerId);
+        return repositories.stream()
+                .map(repo -> mapEntityToDTO(repo))
+                .collect(Collectors.toList());
+	}
 }
 

@@ -1,14 +1,17 @@
 package com.akshay.Collabu.exceptions;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 
-import java.util.HashMap;
-import java.util.Map;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.security.SignatureException;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -27,6 +30,26 @@ public class GlobalExceptionHandler {
 	    ErrorResponse errorResponse = new ErrorResponse("Validation failed", errors);
 	    return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
 	}
+	
+	@ExceptionHandler(SignatureException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidJwt(SignatureException ex) {
+		Map<String, String> errors = new HashMap<>();
+		errors.put("error", "Invalid token");
+		errors.put("message", "Your session has expired or the token is invalid. Please login again.");
+
+	    ErrorResponse errorResponse = new ErrorResponse("Invalid token", errors);
+	    return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(ExpiredJwtException.class)
+    public ResponseEntity<ErrorResponse> handleExpiredJwt(ExpiredJwtException ex) {        
+        Map<String, String> errors = new HashMap<>();
+		errors.put("error", "Token expired");
+		errors.put("message", "Your session has expired. Please login again.");
+
+	    ErrorResponse errorResponse = new ErrorResponse("Token expired", errors);
+	    return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+    }
 
 
     // Handle other exceptions (generic example)

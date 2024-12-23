@@ -22,10 +22,10 @@ import jakarta.validation.Valid;
 public class RepositoryController {
     @Autowired
     private RepositoryService repositoryService;
-
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<RepositoryDTO>> getRepositoriesByUserId(@PathVariable Long userId) {
-        List<RepositoryDTO> repositories = repositoryService.getRepositoriesByUserId(userId);
+    
+    @GetMapping("/user/{userName}")
+    public ResponseEntity<List<RepositoryDTO>> getRepositoriesByUserName(@PathVariable String userName) {
+        List<RepositoryDTO> repositories = repositoryService.getRepositoriesByUserName(userName);
         return ResponseEntity.ok(repositories);
     }
 
@@ -34,5 +34,14 @@ public class RepositoryController {
         RepositoryDTO createdRepo = repositoryService.createRepository(repositoryDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdRepo);
     }
+    
+    @GetMapping("/{username}/{repoName}")
+    public ResponseEntity<RepositoryDTO> getRepositoryByUserAndName(
+            @PathVariable String username,
+            @PathVariable String repoName) {
+        RepositoryDTO repo = repositoryService.findByUsernameAndName(username, repoName);
+        return ResponseEntity.ok(repo);
+    }
+
 }
 

@@ -76,7 +76,11 @@ The Code Collaboration Platform is a portfolio project designed to simulate a Gi
 
 ---
 
-#### **Current Version:** v0.08
+#### **Current Version:** v0.09
+
+Repositories and error pages added, API endpoints for them modified and integrated, navigation added after authentication an user
+
+#### v0.08
 
 Mockito, JUnit test cases added for all methods in service classes
 

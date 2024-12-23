@@ -6,8 +6,6 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -82,35 +80,6 @@ class RepositoryServiceTest {
 			logger.info("Repository doesn't exist for id: {}", 1L);
 		}
     }
-    
-	@Test
-    void testGetRepositoriesByUserId() {
-        
-        User user = new User();
-        user.setId(1L);
-        user.setEmail("don@gmail.com");
-        user.setUsername("don123");
-        user.setRole("ROLE_USER");
-        user.setIsActive(true);
-        
-        Repository_ repo = new Repository_();
-        repo.setId(1L);
-        repo.setName("TestRepo");
-        repo.setDescription("Description");
-        repo.setOwner(user);
-        repo.setDefaultBranch("master");
-        repo.setIsDeleted(false);
-        repo.setStarsCount(0L);
-        repo.setForksCount(0L);
-        
-        List<Repository_> list = new ArrayList<>();
-        list.add(repo);        
-        
-        when(repositoryRepository.findByOwnerId(anyLong())).thenReturn(list);
-
-        List<RepositoryDTO> result = repositoryService.getRepositoriesByUserId(1L);
-        assertEquals("TestRepo", result.get(0).getName());
-    }
 	    
     @Test
     void testCreateRepository() {
@@ -132,7 +101,7 @@ class RepositoryServiceTest {
         repo.setStarsCount(0L);
         repo.setForksCount(0L);
         
-        RepositoryDTO repositoryDTO = new RepositoryDTO(repo.getId(), repo.getName(), repo.getDescription(), user.getId(), true, false, null);
+        RepositoryDTO repositoryDTO = new RepositoryDTO(repo.getId(), repo.getName(), repo.getDescription(), user.getUsername(), true, false, null);
 
     	when(repositoryRepository.existsByNameAndOwnerId(anyString(),anyLong())).thenReturn(true);
 
@@ -183,7 +152,7 @@ class RepositoryServiceTest {
         repo.setStarsCount(0L);
         repo.setForksCount(0L);
         
-        RepositoryDTO repositoryDTO = new RepositoryDTO(repo.getId(), repo.getName(), repo.getDescription(), user.getId(), true, false, null);
+        RepositoryDTO repositoryDTO = new RepositoryDTO(repo.getId(), repo.getName(), repo.getDescription(), user.getUsername(), true, false, null);
                         
         when(repositoryRepository.findById(anyLong())).thenReturn(Optional.of(repo));
         
