@@ -20,7 +20,8 @@ const App = () => {
     const username = localStorage.getItem("username");
 
   if (typeof(token) !== undefined && typeof(username) != undefined && token && username) {
-    dispatch(setUser({username: username, token: token}))
+    dispatch(setUser({username: username, token: token}));
+    console.log("userdata set",userData);
   }
   else {
     localStorage.removeItem("token");
@@ -38,7 +39,7 @@ const App = () => {
         <Route path="/" element={!isUserLoggedIn ? <HomePage /> : <RepositoriesPage />} /> 
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile/:username" element={<ProfilePage />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/:username/repositories" element={<RepositoriesPage />} />
         <Route path="*" element={<ErrorPage />} /> 
