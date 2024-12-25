@@ -9,6 +9,7 @@ import RepositoriesPage from "./pages/RepositoriesPage";
 import ErrorPage from "./pages/ErrorPage";
 import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "./redux/userSlice";
+import Header from "./pages/Header";
 
 const App = () => {
   const userData = useSelector(state => state.user);
@@ -35,6 +36,7 @@ const App = () => {
 
   return (
     <Router>
+      <Header isUserLoggedIn={isUserLoggedIn} username={userData?.username} />
       <Routes>
         <Route path="/" element={!isUserLoggedIn ? <HomePage /> : <RepositoriesPage />} /> 
         <Route path="/login" element={<LoginPage />} />

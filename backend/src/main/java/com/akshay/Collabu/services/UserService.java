@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,6 +22,12 @@ import com.akshay.Collabu.repositories.UserRepository;
 public class UserService {
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    
+    @Autowired
+    private CacheService cacheService;
 
 	@Autowired
 	private Environment env;
@@ -127,6 +134,35 @@ public class UserService {
                 
         return mapEntityToDto(updatedUser);
 
+	}
+
+	public boolean updatePassword(UserDetails userDetails, UserDetailsDTO userDetailsDTO) {
+		User user = userRepository.findByUsername(userDetails.getUsername())
+    			.orElseThrow(() -> new RuntimeException("User not found"));
+		
+		String password = userDetailsDTO.getPassword();
+        user.setPassword(passwordEncoder.encode(password));
+
+        userRepository.save(user);
+        
+		return true;
+		
+	}
+	
+	public void updateLastLogin(String username) {
+		User user = userRepository.findByUsername(username)
+    			.orElseThrow(() -> new RuntimeException("User not found"));
+		
+		user.setLastLogin(LocalDateTime.now());
+        userRepository.save(user);		
+	}
+
+	public void deleteUserByUsername(String username) {
+    	Long userId = cacheService.getUserId(username);
+    	if (userId == null) {
+            throw new RuntimeException("User id doesn't exist for this username");    		
+    	}
+    	deleteUser(userId);
 	}
 }
 

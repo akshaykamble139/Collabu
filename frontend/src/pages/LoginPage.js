@@ -34,7 +34,6 @@ const LoginPage = () => {
       navigate("/dashboard"); // Redirect to Dashboard
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please try again.");
-      navigate("/error", { state: { code: 401 } });
     }
   };
 

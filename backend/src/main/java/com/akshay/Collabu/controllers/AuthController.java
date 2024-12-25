@@ -44,6 +44,7 @@ public class AuthController {
     public ResponseEntity<String> loginUser(@RequestBody UserDTO userDTO) {
         UserDetails userDetails = userDetailsService.loadUserByUsername(userDTO.getUsername());
         if (passwordEncoder.matches(userDTO.getPassword(), userDetails.getPassword())) {
+        	userService.updateLastLogin(userDTO.getUsername());
             String token = jwtUtils.generateToken(userDTO.getUsername());
             return ResponseEntity.ok(token);
         } else {

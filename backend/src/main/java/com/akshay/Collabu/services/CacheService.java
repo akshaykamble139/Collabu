@@ -33,12 +33,18 @@ public class CacheService {
 
     // Get username by userId
     public String getUsername(Long userId) {
-        return userIdToUsernameCache.computeIfAbsent(userId, this::fetchAndCacheUsername);
+    	if (userIdToUsernameCache.containsKey(userId)) {
+    		return userIdToUsernameCache.get(userId);
+    	}
+    	return fetchAndCacheUsername(userId);
     }
 
     // Get userId by username
     public Long getUserId(String username) {
-        return usernameToUserIdCache.computeIfAbsent(username, this::fetchAndCacheUserId);
+    	if (usernameToUserIdCache.containsKey(username)) {
+    		return usernameToUserIdCache.get(username);
+    	}
+        return fetchAndCacheUserId(username);
     }
 
     // Fetch username from DB if not in cache

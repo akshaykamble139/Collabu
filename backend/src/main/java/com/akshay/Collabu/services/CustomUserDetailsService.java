@@ -23,8 +23,6 @@ public class CustomUserDetailsService implements UserDetailsService {
         com.akshay.Collabu.models.User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
         
-        user.setLastLogin(LocalDateTime.now());
-        userRepository.save(user);
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getUsername())
                 .password(user.getPassword())

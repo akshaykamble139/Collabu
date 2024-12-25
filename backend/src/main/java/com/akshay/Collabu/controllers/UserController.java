@@ -4,9 +4,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -50,10 +52,22 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
+    @PostMapping("/password")
+    public ResponseEntity<String> updatePassword(@RequestBody UserDetailsDTO userDetailsDTO, @AuthenticationPrincipal UserDetails userDetails) {
+        boolean success = userService.updatePassword(userDetails, userDetailsDTO);
+        return ResponseEntity.ok("Password changed successfully!");
+    }
+
     @PostMapping
     public ResponseEntity<UserDTO> createUser(@RequestBody @Valid UserDTO userDTO) {
         UserDTO createdUser = userService.createUser(userDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
+    }
+    
+    @DeleteMapping
+    public ResponseEntity<String> deleteUser(@AuthenticationPrincipal UserDetails userDetails) {
+        userService.deleteUserByUsername(userDetails.getUsername());
+        return ResponseEntity.status(HttpStatusCode.valueOf(204)).body("Account deleted succesfully!");
     }
     
     @PostMapping("/upload-profile-picture")

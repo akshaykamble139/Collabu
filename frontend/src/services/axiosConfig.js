@@ -21,10 +21,15 @@ instance.interceptors.response.use((response) => {
 }, (error) => {
   if (error.response && error.response.status === 401) {
     // Token expired or invalid
-    alert("Session expired. Please login again.");
-    localStorage.removeItem("token");
-    localStorage.removeItem("username")
-    window.location.href = "/login";
+    if (error?.response?.data === "Invalid credentials") {
+      alert("Invalid credentials. Please login again.");
+    }
+    else {
+      alert("Session expired. Please login again.");
+      localStorage.removeItem("token");
+      localStorage.removeItem("username")
+      window.location.href = "/login";
+    }
   }
   return Promise.reject(error);
 });

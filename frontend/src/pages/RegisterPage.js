@@ -29,7 +29,6 @@ const RegisterPage = () => {
       navigate("/login");
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed. Please try again.");
-      navigate("/error", { state: { code: 400 } });
     }
   };
 
