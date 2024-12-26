@@ -46,10 +46,10 @@ const Header = () => {
               <Button
                 color="inherit"
                 component={Link}
-                to="/dashboard"
+                to={`/${userData.username}/repositories`}
                 sx={{ textTransform: "none" }}
               >
-                Dashboard
+                Repositories
               </Button>
               <Button
                 color="inherit"

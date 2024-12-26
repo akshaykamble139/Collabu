@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
-import Dashboard from "./pages/Dashboard";
 import HomePage from "./pages/HomePage";
 import RegisterPage from "./pages/RegisterPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -10,6 +9,7 @@ import ErrorPage from "./pages/ErrorPage";
 import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "./redux/userSlice";
 import Header from "./pages/Header";
+import RepositoryPage from "./pages/RepositoryPage";
 
 const App = () => {
   const userData = useSelector(state => state.user);
@@ -42,8 +42,8 @@ const App = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/profile/:username" element={<ProfilePage />} />
-        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/:username/repositories" element={<RepositoriesPage />} />
+        <Route path="/:username/:repoName" element={<RepositoryPage />} />
         <Route path="*" element={<ErrorPage />} /> 
         </Routes>
     </Router>
