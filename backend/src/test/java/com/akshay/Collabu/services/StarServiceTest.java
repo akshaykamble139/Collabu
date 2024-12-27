@@ -109,7 +109,7 @@ class StarServiceTest {
         star.setUser(user);
         star.setRepository(repo);
         
-        StarDTO starDTO = new StarDTO(star.getId(), star.getUser().getId(), star.getRepository().getId(), star.getIsActive());
+        StarDTO starDTO = new StarDTO(star.getId(), star.getRepository().getId(), star.getIsActive());
 
         when(repositoryRepository.findById(anyLong())).thenReturn(Optional.of(repo));
        
@@ -117,17 +117,17 @@ class StarServiceTest {
 
         when(starRepository.save(any())).thenReturn(star);
         
-        StarDTO result = starService.toggleStar(starDTO);
+        StarDTO result = starService.toggleStar(user.getUsername(),starDTO);
         assertEquals(false, result.getIsActive());
         
-        result = starService.toggleStar(starDTO);
+        result = starService.toggleStar(user.getUsername(),starDTO);
         assertEquals(true, result.getIsActive());
         
 		when(starRepository.findByUserIdAndRepositoryId(anyLong(),anyLong())).thenReturn(Optional.empty());
         
         try {
             when(userRepository.findById(anyLong())).thenReturn(Optional.empty());
-            starService.toggleStar(starDTO);
+            starService.toggleStar(user.getUsername(),starDTO);
         }
         catch (Exception e) {
 			logger.info("User doesn't exist for id: {}", 1L);
@@ -136,7 +136,7 @@ class StarServiceTest {
         try {
             when(userRepository.findById(anyLong())).thenReturn(Optional.of(user));
             when(repositoryRepository.findById(anyLong())).thenReturn(Optional.empty());
-            starService.toggleStar(starDTO);
+            starService.toggleStar(user.getUsername(),starDTO);
 	    }
 	    catch (Exception e) {
 			logger.info("Repository doesn't exist for id: {}", 1L);
@@ -146,7 +146,7 @@ class StarServiceTest {
         
         when(starRepository.save(any())).thenReturn(star);
         
-        result = starService.toggleStar(starDTO);
+        result = starService.toggleStar(user.getUsername(),starDTO);
         assertEquals(true, result.getIsActive());
     }
         
@@ -177,16 +177,16 @@ class StarServiceTest {
         star.setUser(user);
         star.setRepository(repo);
         
-        StarDTO starDTO = new StarDTO(star.getId(), star.getUser().getId(), star.getRepository().getId(), star.getIsActive());
+        StarDTO starDTO = new StarDTO(star.getId(), star.getRepository().getId(), star.getIsActive());
        
     	when(starRepository.findByUserIdAndRepositoryId(anyLong(),anyLong())).thenReturn(Optional.of(star));
         
-        StarDTO result = starService.getStarStatus(starDTO);
+        StarDTO result = starService.getStarStatus(user.getUsername(),starDTO);
         assertEquals(true, result.getIsActive());
         
 		when(starRepository.findByUserIdAndRepositoryId(anyLong(),anyLong())).thenReturn(Optional.empty());
 		
-        result = starService.getStarStatus(starDTO);
+        result = starService.getStarStatus(user.getUsername(),starDTO);
         assertEquals(false, result.getIsActive());    
     }
     

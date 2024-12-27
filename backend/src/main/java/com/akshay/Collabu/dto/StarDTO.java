@@ -9,9 +9,6 @@ import lombok.Data;
 public class StarDTO {
     private Long id;
     
-    @NotNull(message = "userId can't be null")
-    private Long userId;
-
     @NotNull(message = "repositoryId can't be null")
     private Long repositoryId;
     

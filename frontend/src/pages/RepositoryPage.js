@@ -12,6 +12,10 @@ import {
   Divider,
   Tabs,
   Tab,
+  List,
+  ListItem,
+  ListItemText,
+  Alert,
 } from '@mui/material';
 import {
   Star,
@@ -21,14 +25,24 @@ import {
   GitBranch,
   Clock,
   FileText,
+  Trash,
+  Upload,
 } from 'lucide-react';
 import instance from '../services/axiosConfig';
+import { useSelector } from 'react-redux';
 
 const RepositoryPage = () => {
   const { username, repoName } = useParams();
   const [repo, setRepo] = useState(null);
   const [currentTab, setCurrentTab] = useState(0);
+  const [branches, setBranches] = useState([]);
+  const [files, setFiles] = useState([]);
+  const [showBranchDialog, setShowBranchDialog] = useState(false);
+  const [newBranchName, setNewBranchName] = useState('');
+  const [alertMessage, setAlertMessage] = useState(null);
+  const [isStarred, setIsStarred] = useState(false);
   const navigate = useNavigate();
+  const userData = useSelector(state => state.user);
 
   useEffect(() => {
     const fetchRepo = async () => {
@@ -37,14 +51,85 @@ const RepositoryPage = () => {
         const modifiedData = {...response.data, isPublic: response.data.public};
         setRepo(modifiedData);
         console.log(modifiedData)
+
+        // Fetch branches and files
+        const branchesResponse = await instance.get(`/branches/repository/${response.data.id}`);
+        const filesResponse = await instance.get(`/files/repository/${response.data.id}`);
+        setBranches(branchesResponse.data);
+        setFiles(filesResponse.data);
+
+        const starResponse = await instance.post('/stars/status', { repositoryId: response.data.id });  
+        setIsStarred(starResponse.data.isActive)
       } catch (err) {
-        navigate('/error', { state: { code: 404 } });
+        navigate('/error', { state: { code: err?.response?.code ? err.response.code : 404 } });
       }
     };
     fetchRepo();
   }, [username, repoName]);
 
+  const handleCreateBranch = async () => {
+    try {
+      const response = await instance.post('/branches', {
+        name: newBranchName,
+        repositoryId: repo.id,
+      });
+      setBranches((prev) => [...prev, response.data]);
+      setShowBranchDialog(false);
+      setNewBranchName('');
+      setAlertMessage({ type: 'success', text: 'Branch created successfully!' });
+    } catch (err) {
+      setAlertMessage({ type: 'error', text: 'Failed to create branch.' });
+    }
+  };
+
+  const handleDeleteBranch = async (branchId) => {
+    try {
+      await instance.delete(`/branches/${branchId}`);
+      setBranches((prev) => prev.filter((branch) => branch.id !== branchId));
+      setAlertMessage({ type: 'success', text: 'Branch deleted successfully!' });
+    } catch (err) {
+      setAlertMessage({ type: 'error', text: 'Failed to delete branch.' });
+    }
+  };
+
+  const handleFileUpload = async (event) => {
+    const formData = new FormData();
+    formData.append('file', event.target.files[0]);
+    formData.append('repositoryId', repo.id);
+    try {
+      const response = await instance.post('/files', formData);
+      setFiles((prev) => [...prev, response.data]);
+      setAlertMessage({ type: 'success', text: 'File uploaded successfully!' });
+    } catch (err) {
+      setAlertMessage({ type: 'error', text: 'Failed to upload file.' });
+    }
+  };
+
+  const handleDeleteFile = async (fileId) => {
+    try {
+      await instance.delete(`/files/${fileId}`);
+      setFiles((prev) => prev.filter((file) => file.id !== fileId));
+      setAlertMessage({ type: 'success', text: 'File deleted successfully!' });
+    } catch (err) {
+      setAlertMessage({ type: 'error', text: 'Failed to delete file.' });
+    }
+  };
+
+  const handleToggleStar = async () => {
+    try {
+      await instance.post('/stars/toggle', { repositoryId: repo.id });
+      setIsStarred((prev) => (!prev.isStarred));
+      setAlertMessage({
+        type: 'success',
+        text: isStarred ? 'Repository unstarred!' : 'Repository starred!',
+      });
+    } catch (err) {
+      setAlertMessage({ type: 'error', text: 'Failed to toggle star.' });
+    }
+  };
+
   if (!repo) return null;
+
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -76,14 +161,16 @@ const RepositoryPage = () => {
           
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
-              variant="outlined"
+              variant={isStarred ? 'contained' : 'outlined'}
               startIcon={<Star />}
               size="small"
+              onClick={handleToggleStar}
             >
-              Star
+              { isStarred ? 'Unstar' : 'Star'}
             </Button>
             <Button
-              variant="outlined"
+              variant={repo.isForked ? 'contained' : 'outlined'}
+              disabled={userData?.username === username}
               startIcon={<GitFork />}
               size="small"
             >
@@ -123,16 +210,32 @@ const RepositoryPage = () => {
                 main
               </Button>
             </Box>
-            <Button variant="contained" size="small">
+            {userData?.username === username &&
+            <Button variant="contained" component="label">
               Add File
-            </Button>
+              <input hidden type="file" onChange={handleFileUpload} />
+            </Button>}
           </Box>
-          
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              No files in this repository
-            </Typography>
-          </Box>
+          {files.length > 0 &&
+          <List>
+            {files.map((file) => (
+              <ListItem
+                key={file.id}
+                secondaryAction={
+                   userData?.username === username ?
+                  <IconButton
+                    edge="end"
+                    aria-label="delete"
+                    onClick={() => handleDeleteFile(file.id)}
+                  >
+                    <Trash size={16} />
+                  </IconButton> : null
+                }
+              >
+                <ListItemText primary={file.name} />
+              </ListItem>
+            ))}
+          </List>}
         </Paper>
       )}
     </Container>

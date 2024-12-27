@@ -22,6 +22,9 @@ public class StarService {
     private UserRepository userRepository;
     
     @Autowired
+    private CacheService cacheService;
+    
+    @Autowired
     private RepositoryRepository repositoryRepository;
     
     public Integer getStarCountByRepositoryId(Long repositoryId) {
@@ -29,8 +32,11 @@ public class StarService {
         return stars.size();
     }
     
-    public StarDTO toggleStar(StarDTO starDTO) {
-    	Long userId = starDTO.getUserId();
+    public StarDTO toggleStar(String username, StarDTO starDTO) {
+    	Long userId = cacheService.getUserId(username);
+    	if (userId == null) {
+            throw new RuntimeException("User id doesn't exist for this username");    		
+    	}
     	Long repositoryId = starDTO.getRepositoryId();
         Star star = starRepository.findByUserIdAndRepositoryId(userId, repositoryId).orElse(null);
 
@@ -38,10 +44,10 @@ public class StarService {
             // Create a new star entry if not found
             star = new Star();
             
-            User user = userRepository.findById(starDTO.getUserId())
+            User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));    
             
-            star.setUser(new User());
+            star.setUser(user);
 
             Repository_ repo = repositoryRepository.findById(starDTO.getRepositoryId())
                     .orElseThrow(() -> new RuntimeException("Repository not found"));
@@ -56,17 +62,20 @@ public class StarService {
 
         Star savedStar = starRepository.save(star);
         
-        return new StarDTO(savedStar.getId(), savedStar.getUser().getId(), savedStar.getRepository().getId(), savedStar.getIsActive());
+        return new StarDTO(savedStar.getId(), savedStar.getRepository().getId(), savedStar.getIsActive());
     }
     
-    public StarDTO getStarStatus(StarDTO starDTO) {
-    	Long userId = starDTO.getUserId();
+    public StarDTO getStarStatus(String username, StarDTO starDTO) {
+    	Long userId = cacheService.getUserId(username);
+    	if (userId == null) {
+            throw new RuntimeException("User id doesn't exist for this username");    		
+    	}
     	Long repositoryId = starDTO.getRepositoryId();
         Star savedStar = starRepository.findByUserIdAndRepositoryId(userId, repositoryId).orElse(null);
         if (savedStar == null) {
-            return new StarDTO(null, userId, repositoryId, false);
+            return new StarDTO(null, repositoryId, false);
         }
-        return new StarDTO(savedStar.getId(), savedStar.getUser().getId(), savedStar.getRepository().getId(), savedStar.getIsActive());
+        return new StarDTO(savedStar.getId(), savedStar.getRepository().getId(), savedStar.getIsActive());
     }
 
     public void deleteStar(Long id) {
