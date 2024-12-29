@@ -16,6 +16,7 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.akshay.Collabu.dto.RepositoryDTO;
 import com.akshay.Collabu.models.Repository_;
@@ -32,6 +33,9 @@ class RepositoryServiceTest {
 	
     @Mock
     private UserRepository userRepository;
+    
+    @Mock
+    private CacheService cacheService;
 
     @InjectMocks
     private RepositoryService repositoryService;
@@ -111,7 +115,9 @@ class RepositoryServiceTest {
         catch (Exception e) {
 			logger.info("Repository doesn't exist for id: {}", 1L);
 		}
-                
+                        
+    	when(cacheService.getUserId(anyString())).thenReturn(12345L);
+    	
     	when(repositoryRepository.existsByNameAndOwnerId(anyString(),anyLong())).thenReturn(false);
 
         Mockito.when(userRepository.findById(anyLong())).thenReturn(Optional.of(user));
@@ -119,6 +125,7 @@ class RepositoryServiceTest {
         when(repositoryRepository.findById(anyLong())).thenReturn(Optional.of(repo));
         
         when(repositoryRepository.save(any())).thenReturn(repo);
+        
 
         RepositoryDTO result = repositoryService.createRepository(repositoryDTO);
         assertEquals("TestRepo", result.getName());

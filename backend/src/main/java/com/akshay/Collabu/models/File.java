@@ -46,6 +46,9 @@ public class File {
 
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted = false;
+    
+    @Column(name = "storage_url")
+    private String storageUrl;
 
     @Override
     public boolean equals(Object o) {

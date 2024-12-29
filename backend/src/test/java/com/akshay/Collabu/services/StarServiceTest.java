@@ -3,6 +3,7 @@ package com.akshay.Collabu.services;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
@@ -35,6 +36,9 @@ class StarServiceTest {
     
     @Mock
     private UserRepository userRepository;
+    
+    @Mock
+    private CacheService cacheService;
     
     @Mock
     private RepositoryRepository repositoryRepository;
@@ -113,6 +117,8 @@ class StarServiceTest {
 
         when(repositoryRepository.findById(anyLong())).thenReturn(Optional.of(repo));
        
+    	when(cacheService.getUserId(anyString())).thenReturn(12345L);
+
     	when(starRepository.findByUserIdAndRepositoryId(anyLong(),anyLong())).thenReturn(Optional.of(star));
 
         when(starRepository.save(any())).thenReturn(star);
@@ -179,6 +185,8 @@ class StarServiceTest {
         
         StarDTO starDTO = new StarDTO(star.getId(), star.getRepository().getId(), star.getIsActive());
        
+    	when(cacheService.getUserId(anyString())).thenReturn(12345L);
+
     	when(starRepository.findByUserIdAndRepositoryId(anyLong(),anyLong())).thenReturn(Optional.of(star));
         
         StarDTO result = starService.getStarStatus(user.getUsername(),starDTO);
