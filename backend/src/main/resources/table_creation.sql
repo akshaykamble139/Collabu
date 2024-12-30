@@ -76,9 +76,14 @@ CREATE TABLE `branches` (
   `is_default` tinyint(1) DEFAULT '0',
   `last_commit_id` bigint DEFAULT NULL,
   `is_deleted` tinyint(1) DEFAULT '0',
+  `parent_branch_id` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `repository_id` (`repository_id`),
-  CONSTRAINT `branches_ibfk_1` FOREIGN KEY (`repository_id`) REFERENCES `repositories` (`id`)
+  KEY `FK3ewtm60811u8k72d34i5038e6` (`last_commit_id`),
+  KEY `branches_ibfk_2` (`parent_branch_id`),
+  CONSTRAINT `branches_ibfk_1` FOREIGN KEY (`repository_id`) REFERENCES `repositories` (`id`),
+  CONSTRAINT `branches_ibfk_2` FOREIGN KEY (`parent_branch_id`) REFERENCES `branches` (`id`),
+  CONSTRAINT `FK3ewtm60811u8k72d34i5038e6` FOREIGN KEY (`last_commit_id`) REFERENCES `commits` (`id`)
 );
 
 CREATE TABLE `pull_requests` (
@@ -135,4 +140,43 @@ CREATE TABLE `stars` (
   CONSTRAINT `stars_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
   CONSTRAINT `stars_ibfk_2` FOREIGN KEY (`repository_id`) REFERENCES `repositories` (`id`)
 )
+
+CREATE TABLE `file_versions` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `file_id` bigint NOT NULL,
+  `version_number` int NOT NULL,
+  `commit_id` bigint NOT NULL,
+  `content` text, -- Optional: Store content directly or as a reference to AWS S3
+  `size` bigint DEFAULT 0,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `file_id` (`file_id`),
+  KEY `commit_id` (`commit_id`),
+  CONSTRAINT `file_versions_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `files` (`id`),
+  CONSTRAINT `file_versions_ibfk_2` FOREIGN KEY (`commit_id`) REFERENCES `commits` (`id`)
+);
+
+CREATE TABLE `diffs` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `file_id` bigint NOT NULL,
+  `version_from` int NOT NULL,
+  `version_to` int NOT NULL,
+  `diff_content` text, -- Store JSON or unified diff format
+  PRIMARY KEY (`id`),
+  KEY `file_id` (`file_id`),
+  CONSTRAINT `diffs_ibfk_1` FOREIGN KEY (`file_id`) REFERENCES `files` (`id`)
+);
+
+CREATE TABLE `merge_conflicts` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `pull_request_id` bigint NOT NULL,
+  `file_id` bigint NOT NULL,
+  `conflict_details` text, -- Store conflict data as JSON
+  `resolved` tinyint(1) DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `pull_request_id` (`pull_request_id`),
+  KEY `file_id` (`file_id`),
+  CONSTRAINT `merge_conflicts_ibfk_1` FOREIGN KEY (`pull_request_id`) REFERENCES `pull_requests` (`id`),
+  CONSTRAINT `merge_conflicts_ibfk_2` FOREIGN KEY (`file_id`) REFERENCES `files` (`id`)
+);
 

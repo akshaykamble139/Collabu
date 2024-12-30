@@ -76,7 +76,11 @@ The Code Collaboration Platform is a portfolio project designed to simulate a Gi
 
 ---
 
-#### **Current Version:** v0.14
+#### **Current Version:** v0.15
+
+Db schema changed by adding new tables for diff, merge conflicts and file version so that the application can better provide functionality of version control. Also their corresponding entities, DTOs, repositories, services and controllers added.
+
+#### v0.14
 
 AWS credentials configured into application and API endpoint created to upload files into S3 bucket
 

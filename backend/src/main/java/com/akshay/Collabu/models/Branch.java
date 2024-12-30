@@ -38,6 +38,10 @@ public class Branch {
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted = false;
 
+    @ManyToOne
+    @JoinColumn(name = "parent_branch_id")
+    private Branch parentBranch;
+    
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

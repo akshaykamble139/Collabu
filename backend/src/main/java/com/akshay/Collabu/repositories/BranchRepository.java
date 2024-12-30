@@ -12,4 +12,6 @@ public interface BranchRepository extends JpaRepository<Branch, Long> {
     List<Branch> findByRepositoryId(Long repositoryId);
     Branch findByRepositoryIdAndIsDefaultTrue(Long repositoryId); // Find the default branch
 	boolean existsByRepositoryIdAndName(Long repositoryId ,String branchName);
+    List<Branch> findByParentBranchId(Long parentBranchId);
+
 }

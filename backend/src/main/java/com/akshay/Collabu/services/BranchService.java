@@ -56,4 +56,8 @@ public class BranchService {
         }
     	branchRepository.deleteById(id);
 	}
+    
+    public List<Branch> getChildBranches(Long parentBranchId) {
+        return branchRepository.findByParentBranchId(parentBranchId);
+    }
 }
