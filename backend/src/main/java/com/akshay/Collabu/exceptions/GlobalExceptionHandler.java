@@ -1,14 +1,17 @@
 package com.akshay.Collabu.exceptions;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.server.ResponseStatusException;
 
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.security.SignatureException;
@@ -49,6 +52,24 @@ public class GlobalExceptionHandler {
 
 	    ErrorResponse errorResponse = new ErrorResponse("Token expired", errors);
 	    return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+    }
+    
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleExpiredJwt(ResponseStatusException ex) {        
+        Map<String, String> errors = new HashMap<>();
+        String[] messageArray = ex.getMessage().split(" ");
+        
+        StringBuilder message = new StringBuilder();
+        
+        for (int i=2; i < messageArray.length; i++) {
+			message.append(messageArray[i] + " ");
+			
+		}
+		errors.put("error", messageArray[1]);
+		errors.put("message", message.toString());
+
+	    ErrorResponse errorResponse = new ErrorResponse(message.toString(), errors);
+	    return new ResponseEntity<>(errorResponse, HttpStatusCode.valueOf(Integer.valueOf(messageArray[0])));
     }
 
 

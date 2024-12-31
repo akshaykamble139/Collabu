@@ -26,6 +26,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getUsername())
                 .password(user.getPassword())
+                .accountLocked(!user.getIsActive())
                 .roles(user.getRole().replace("ROLE_", "")) // Remove ROLE_ prefix for Spring Security
                 .build();
     }

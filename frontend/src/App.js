@@ -10,6 +10,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "./redux/userSlice";
 import Header from "./pages/Header";
 import RepositoryPage from "./pages/RepositoryPage";
+import GlobalNotification from "./pages/GlobalNotification";
+import ReactivateAccount from "./pages/ReactivateAccount";
 
 const App = () => {
   const userData = useSelector(state => state.user);
@@ -37,10 +39,12 @@ const App = () => {
   return (
     <Router>
       <Header isUserLoggedIn={isUserLoggedIn} username={userData?.username} />
+      <GlobalNotification />  
       <Routes>
         <Route path="/" element={!isUserLoggedIn ? <HomePage /> : <RepositoriesPage />} /> 
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/reactivate" element={<ReactivateAccount />} />
         <Route path="/profile/:username" element={<ProfilePage />} />
         <Route path="/:username/repositories" element={<RepositoriesPage />} />
         <Route path="/:username/:repoName" element={<RepositoryPage />} />

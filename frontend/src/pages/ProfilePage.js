@@ -120,7 +120,7 @@ const ProfilePage = () => {
 
   const handleDeactivate = async () => {
     if (window.confirm("Are you sure you want to deactivate your account?")) {
-      await instance.post("/users/deactivate");
+      await instance.patch("/api/auth/deactivate");
       handleLogout();
     }
   };
@@ -206,7 +206,7 @@ const ProfilePage = () => {
         {userData !== null && userData.username === username &&
           <Box sx={{ mt: 5, width: "100%" }}>
             <Button variant="outlined" fullWidth onClick={handleLogout} sx={{ mt: 2 }}>Logout</Button>
-            {/* <Button variant="outlined" fullWidth onClick={handleDeactivate} sx={{ mt: 2 }}>Deactivate Account</Button> */}
+            <Button variant="outlined" fullWidth onClick={handleDeactivate} sx={{ mt: 2 }}>Deactivate Account</Button>
             <Button variant="contained" color="error" fullWidth onClick={handleDelete} sx={{ mt: 2 }}>Delete Account</Button>
           </Box>}
       </Box>

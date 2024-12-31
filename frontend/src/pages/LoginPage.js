@@ -1,39 +1,59 @@
-// src/pages/LoginPage.js
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { TextField, Button, Typography, Container, Box } from "@mui/material";
+import { TextField, Button, Typography, Container, Box, CircularProgress } from "@mui/material";
 import instance from "../services/axiosConfig";
 import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "../redux/userSlice";
+import { showNotification } from "../redux/notificationSlice";  // Import notification action
 
 const LoginPage = () => {
   const [form, setForm] = useState({ username: "", password: "" });
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const userData = useSelector(state => state.user);
 
-
   useEffect(() => {
-    if (userData !== null && userData.username !== "" && userData.token !== "") {
+    if (userData?.username && userData?.token) {
       navigate("/");
     }
-  }, [userData]);
+  }, [userData, navigate]);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const validateForm = () => {
+    if (!form.username || !form.password) {
+      dispatch(showNotification({ message: "Username and Password are required.", type: "error" }));
+      return false;
+    }
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
+    setLoading(true);
     try {
       const response = await instance.post("/api/auth/login", form);
-      localStorage.setItem("token", response.data); // Store JWT token
-      localStorage.setItem("username", form.username); // Store username
-      dispatch(setUser({username: form.username, token: response.data}))
-      alert("Login successful!");
-      navigate("/dashboard"); // Redirect to Dashboard
+      const token = response.data;
+
+      localStorage.setItem("token", token);  
+      localStorage.setItem("username", form.username); 
+
+      dispatch(setUser({ username: form.username, token }));
+      dispatch(showNotification({ message: "Login successful!", type: "success" }));
+
+      setTimeout(() => {
+        navigate("/");
+      }, 1000);
+
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed. Please try again.");
+      console.log("login failed", err.response?.data?.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -52,11 +72,6 @@ const LoginPage = () => {
         <Typography variant="h4" component="h1" gutterBottom>
           Login to Your Account
         </Typography>
-        {error && (
-          <Typography color="error" variant="body1" gutterBottom>
-            {error}
-          </Typography>
-        )}
         <Box component="form" onSubmit={handleSubmit} sx={{ width: "100%" }}>
           <TextField
             label="Username"
@@ -77,8 +92,15 @@ const LoginPage = () => {
             onChange={handleChange}
             required
           />
-          <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 2 }}>
-            Login
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            fullWidth
+            sx={{ mt: 2 }}
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : "Login"}
           </Button>
         </Box>
       </Box>
@@ -87,4 +109,3 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
-

@@ -8,10 +8,13 @@ import java.time.LocalDateTime;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.akshay.Collabu.dto.UserDTO;
 import com.akshay.Collabu.dto.UserDetailsDTO;
@@ -34,13 +37,13 @@ public class UserService {
 	
     public UserDTO getUserById(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         return new UserDTO(user.getId(), user.getUsername(), user.getEmail());
     }
 
     public UserDTO createUser(UserDTO userDTO) {        
         if (userRepository.existsByUsernameOrEmail(userDTO.getUsername(), userDTO.getEmail())) {
-            throw new RuntimeException("Username or email already exists");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Username or email already exists");
         }
         User user = new User();
         user.setUsername(userDTO.getUsername());
@@ -54,14 +57,14 @@ public class UserService {
 
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
-            throw new RuntimeException("User not found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
         userRepository.deleteById(id);
     }
 
     public UserDTO updateUser(Long id, UserDTO userDTO) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         user.setUsername(userDTO.getUsername());
         user.setEmail(userDTO.getEmail());
         User updatedUser = userRepository.save(user);
@@ -71,7 +74,7 @@ public class UserService {
     public Boolean uploadProfilePicture(UserDetails userDetails, MultipartFile file) throws IllegalStateException, IOException {
     	// Get current authenticated user
         User user = userRepository.findByUsername(userDetails.getUsername())
-        			.orElseThrow(() -> new RuntimeException("User not found"));
+        			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         // Create directory if not exists
         String uploadDirectory = env.getProperty("profile.image.upload-dir", "src/main/resources/static/images/profile_pictures/");
@@ -96,7 +99,7 @@ public class UserService {
 
 	public UserDetailsDTO getUserDetailsByUserName(String userName) {
 		User user = userRepository.findByUsername(userName)
-    			.orElseThrow(() -> new RuntimeException("User not found"));
+    			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         return mapEntityToDto(user);
 	}
 
@@ -116,7 +119,7 @@ public class UserService {
 
 	public UserDetailsDTO updateUserDetails(UserDetails userDetails, UserDetailsDTO userDetailsDTO) {
 		User user = userRepository.findByUsername(userDetails.getUsername())
-    			.orElseThrow(() -> new RuntimeException("User not found"));
+    			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 		
 		if (userDetailsDTO.getBio() != null && !userDetailsDTO.getBio().isBlank()) {
 			user.setBio(userDetailsDTO.getBio());
@@ -138,7 +141,7 @@ public class UserService {
 
 	public boolean updatePassword(UserDetails userDetails, UserDetailsDTO userDetailsDTO) {
 		User user = userRepository.findByUsername(userDetails.getUsername())
-    			.orElseThrow(() -> new RuntimeException("User not found"));
+    			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 		
 		String password = userDetailsDTO.getPassword();
         user.setPassword(passwordEncoder.encode(password));
@@ -151,18 +154,45 @@ public class UserService {
 	
 	public void updateLastLogin(String username) {
 		User user = userRepository.findByUsername(username)
-    			.orElseThrow(() -> new RuntimeException("User not found"));
+    			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 		
 		user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);		
+	}
+	
+	public boolean updateIsActive(UserDTO userDTO) {
+		User user = userRepository.findByUsernameAndEmail(userDTO.getUsername(), userDTO.getEmail())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        // Validate password
+        if (!passwordEncoder.matches(userDTO.getPassword(), user.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
+        }
+
+        // Reactivate the user
+        if (!user.getIsActive()) {
+            user.setIsActive(true);
+            userRepository.save(user);
+            return true;
+        } else {
+        	throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account is already active.");
+        }	
 	}
 
 	public void deleteUserByUsername(String username) {
     	Long userId = cacheService.getUserId(username);
     	if (userId == null) {
-            throw new RuntimeException("User id doesn't exist for this username");    		
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User id doesn't exist for this username");    		
     	}
     	deleteUser(userId);
+	}
+
+	public void deactivateByUsername(String username) {
+		User user = userRepository.findByUsername(username)
+    			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+		
+		user.setIsActive(false);
+        userRepository.save(user);				
 	}
 }
 
