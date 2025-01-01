@@ -76,7 +76,11 @@ The Code Collaboration Platform is a portfolio project designed to simulate a Gi
 
 ---
 
-#### **Current Version:** v0.16
+#### **Current Version:** v0.17
+
+Register and profile page modified according to their requirements in user journeys. Alert popups, validation, error messages all changed and now using reusable global components of confirmation dialog and global notification instead of basic browser alert box.
+
+#### v0.16
 
 User journeys added for reference to understand the logic flow. Reactivate page, global notification page added. Login page mofified to handle all the validation and server errors. Backend changes made to handle these changes.
 

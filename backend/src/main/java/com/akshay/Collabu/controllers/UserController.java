@@ -71,6 +71,12 @@ public class UserController {
         return ResponseEntity.status(HttpStatusCode.valueOf(204)).body("Account deleted succesfully!");
     }
     
+    @PostMapping("/deactivate")
+    public ResponseEntity<String> deactivateUser(@AuthenticationPrincipal UserDetails userDetails) {
+        userService.deactivateByUsername(userDetails.getUsername());
+        return ResponseEntity.status(HttpStatusCode.valueOf(204)).body("Account deactivated succesfully!");
+    }
+    
     @PostMapping("/upload-profile-picture")
     public ResponseEntity<?> uploadProfilePicture(@RequestParam("file") MultipartFile file, @AuthenticationPrincipal UserDetails userDetails) {
         if (file.isEmpty()) {

@@ -15,9 +15,15 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (userData?.username && userData?.token) {
-      navigate("/");
+      dispatch(showNotification({
+        message: "You are already logged in!",
+        type: "error",
+      }));
+      setTimeout(() => {
+          navigate("/");
+      }, 1500);
     }
-  }, [userData, navigate]);
+  }, []);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -36,6 +42,8 @@ const LoginPage = () => {
     if (!validateForm()) return;
 
     setLoading(true);
+
+    setTimeout(async () => {
     try {
       const response = await instance.post("/api/auth/login", form);
       const token = response.data;
@@ -55,6 +63,7 @@ const LoginPage = () => {
     } finally {
       setLoading(false);
     }
+  },1000);
   };
 
   return (

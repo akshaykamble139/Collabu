@@ -57,7 +57,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErrorResponse> handleExpiredJwt(ResponseStatusException ex) {        
         Map<String, String> errors = new HashMap<>();
-        String[] messageArray = ex.getMessage().split(" ");
+        String[] messageArray = ex.getMessage().replace("\"", "").split(" ");
         
         StringBuilder message = new StringBuilder();
         

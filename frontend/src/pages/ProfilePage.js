@@ -1,74 +1,59 @@
 import React, { useEffect, useState } from "react";
 import { Container, Box, Typography, TextField, Button, Avatar, List, ListItem, ListItemText, Divider } from "@mui/material";
-import axios from "axios";
 import instance from "../services/axiosConfig";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../redux/userSlice";
+import { showNotification } from "../redux/notificationSlice";
+import ConfirmationDialog from "./ConfirmationDialog";
 
 const ProfilePage = () => {
   const { username } = useParams();
   const navigate = useNavigate();
   const [user, setUser] = useState({ username: "", email: "", bio: "", location: "", website: "", profilePicture: "" });
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
   const userData = useSelector(state => state.user);
   const dispatch = useDispatch();
   const [selectedFile, setSelectedFile] = useState(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogAction, setDialogAction] = useState(null);
 
   useEffect(() => {
-    let userName = username;
-    if (!userName) {
-      if (userData?.username && userData.token) {
-        userName = userData.username;
-        navigate("/profile/" + userName);
-      } else {
-        const token = localStorage.getItem("token");
-        const username1 = localStorage.getItem("username");
-        if (token && username1) {
-          dispatch(setUser({ username: username1, token: token }));
-          userName = username1;
-          navigate("/profile/" + userName);
-        } else {
-          navigate("/login");
-        }
-      }
+    if (!username && userData.username) {
+      navigate(`/profile/${userData.username}`);
     }
-  }, []);
+  }, [username, userData, navigate]);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
+      setLoading(true);
       try {
-        if (!username) {
-          const response = await instance.get("/users/profile/" + username);
-          setUser(response.data);
-        }
-        else {
-          const response = await instance.get("/users/profile/" + username);
-          setUser(response.data);
-        }
+        const response = await instance.get("/users/profile/" + username);
+        setUser(response.data);
       } catch (error) {
-        navigate("/error", { state: { code: 401 } });
+        dispatch(showNotification({ message: "Failed to load profile.", type: "error" }));
+        navigate("/error");
+      } finally {
+        setLoading(false);
       }
     };
     fetchUserProfile();
-  }, [username]);
+  }, [username, dispatch, navigate]);
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     try {
       await instance.post("/users/password", { password });
-      setMessage("Password updated successfully!");
-      setPassword("");
+      dispatch(showNotification({ message: "Password updated. Please login again.", type: "success" }));
+      localStorage.removeItem("token");
+      localStorage.removeItem("username");
       setTimeout(() => {
-        alert("Password changed. Please login again.");
-        localStorage.removeItem("token");
-        localStorage.removeItem("username");
         dispatch(logout());
         navigate("/login");
       }, 2000);
     } catch (error) {
-      setMessage("Failed to update password. Please try again.");
+      dispatch(showNotification({ message: "Failed to update password.", type: "error" }));
     }
   };
 
@@ -85,9 +70,9 @@ const ProfilePage = () => {
           location: user.location,
           website: user.website
         });
-        setMessage("Profile updated successfully!");
+        dispatch(showNotification({ message: "Profile updated successfully!", type: "success" }));
       } catch (error) {
-        setMessage("Failed to update profile.");
+        dispatch(showNotification({ message: "Failed to update profile.", type: "error" }));
       }
     }
   };
@@ -102,12 +87,12 @@ const ProfilePage = () => {
     formData.append("file", selectedFile);
     try {
       await instance.post("/users/upload-profile-picture", formData, {
-        headers: { "Content-Type": "multipart/form-data" }
+        headers: { "Content-Type": "multipart/form-data" },
       });
-      alert("Profile picture updated!");
+      dispatch(showNotification({ message: "Profile picture updated!", type: "success" }));
       window.location.reload();
     } catch (error) {
-      alert("Failed to upload file.");
+      dispatch(showNotification({ message: "Failed to upload picture.", type: "error" }));
     }
   };
 
@@ -118,17 +103,25 @@ const ProfilePage = () => {
     navigate("/login");
   };
 
-  const handleDeactivate = async () => {
-    if (window.confirm("Are you sure you want to deactivate your account?")) {
-      await instance.patch("/api/auth/deactivate");
-      handleLogout();
-    }
+  const openDialog = (action) => {
+    setDialogAction(action);
+    setDialogOpen(true);
   };
 
-  const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete your account? This action is irreversible.")) {
+  const handleConfirmDialog = async () => {
+    setDialogOpen(false);
+    if (dialogAction === "deactivate") {
+      await instance.post("/users/deactivate");
+      dispatch(showNotification({ message: "Account deactivated.", type: "success" }));
+      setTimeout(() => {
+        handleLogout();
+      },1500);
+    } else if (dialogAction === "delete") {
       await instance.delete("/users");
-      handleLogout();
+      dispatch(showNotification({ message: "Account deleted.", type: "success" }));
+      setTimeout(() => {
+        handleLogout();
+      },1500);
     }
   };
 
@@ -197,19 +190,25 @@ const ProfilePage = () => {
             </Button>
           </Box>}
 
-          {message && (
-            <Typography color="success.main" sx={{ mt: 2 }}>
-              {message}
-            </Typography>
-          )}
-
         {userData !== null && userData.username === username &&
           <Box sx={{ mt: 5, width: "100%" }}>
             <Button variant="outlined" fullWidth onClick={handleLogout} sx={{ mt: 2 }}>Logout</Button>
-            <Button variant="outlined" fullWidth onClick={handleDeactivate} sx={{ mt: 2 }}>Deactivate Account</Button>
-            <Button variant="contained" color="error" fullWidth onClick={handleDelete} sx={{ mt: 2 }}>Delete Account</Button>
+            <Button variant="outlined" fullWidth onClick={() => openDialog("deactivate")} sx={{ mt: 2 }}>Deactivate Account</Button>
+            <Button variant="contained" color="error" fullWidth onClick={() => openDialog("delete")} sx={{ mt: 2 }}>Delete Account</Button>
           </Box>}
       </Box>
+
+      <ConfirmationDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onConfirm={handleConfirmDialog}
+        title={dialogAction === "delete" ? "Delete Account" : "Deactivate Account"}
+        message={
+          dialogAction === "delete"
+            ? "Are you sure you want to delete your account? This action is irreversible."
+            : "Are you sure you want to deactivate your account?"
+        }
+      />
     </Container>
   );
 };

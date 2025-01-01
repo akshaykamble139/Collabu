@@ -78,11 +78,4 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Account is already active.");
         }
     }
-    
-    @DeleteMapping("/deactivate")
-    public ResponseEntity<String> deactivateUser(@AuthenticationPrincipal UserDetails userDetails) {
-        userService.deactivateByUsername(userDetails.getUsername());
-        return ResponseEntity.status(HttpStatusCode.valueOf(204)).body("Account deactivated succesfully!");
-    }
-
 }
