@@ -27,9 +27,12 @@ import {
   FileText,
   Trash,
   Upload,
+  Settings,
 } from 'lucide-react';
 import instance from '../services/axiosConfig';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { showNotification } from '../redux/notificationSlice';
+import ConfirmationDialog from './ConfirmationDialog';
 
 const RepositoryPage = () => {
   const { username, repoName } = useParams();
@@ -40,8 +43,10 @@ const RepositoryPage = () => {
   const [showBranchDialog, setShowBranchDialog] = useState(false);
   const [newBranchName, setNewBranchName] = useState('');
   const [alertMessage, setAlertMessage] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isStarred, setIsStarred] = useState(false);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const userData = useSelector(state => state.user);
 
   useEffect(() => {
@@ -50,7 +55,6 @@ const RepositoryPage = () => {
         const response = await instance.get(`/repositories/${username}/${repoName}`);
         const modifiedData = {...response.data, isPublic: response.data.public};
         setRepo(modifiedData);
-        console.log(modifiedData)
 
         // Fetch branches and files
         const branchesResponse = await instance.get(`/branches/repository/${response.data.id}`);
@@ -128,6 +132,24 @@ const RepositoryPage = () => {
     }
   };
 
+
+   const openDeleteDialog = () => {
+      setDeleteDialogOpen(true);
+    };
+  
+    const handleDeleteRepo = async () => {
+      if (userData?.username === username) {
+        try {
+          await instance.delete(`/repositories/${repo.id}`);
+          dispatch(showNotification({ message: "Repository deleted successfully.", type: "success" }));
+          setDeleteDialogOpen(false);
+          navigate(`/${username}/repositories`);
+        } catch (err) {
+          dispatch(showNotification({ message: "Failed to delete repository.", type: "error" }));
+        }
+      }
+    };
+
   if (!repo) return null;
 
 
@@ -196,6 +218,7 @@ const RepositoryPage = () => {
         <Tab icon={<Code size={16} />} label="Code" iconPosition="start" />
         <Tab icon={<GitBranch size={16} />} label="Branches" iconPosition="start" />
         <Tab icon={<Clock size={16} />} label="Commits" iconPosition="start" />
+        {userData?.username === username && <Tab icon={<Settings size={16} />} label="Settings" iconPosition="start" />}
       </Tabs>
 
       {currentTab === 0 && (
@@ -238,6 +261,34 @@ const RepositoryPage = () => {
           </List>}
         </Paper>
       )}
+
+      {userData?.username === username && currentTab === 3 && (
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h6" color="error" sx={{ mb: 2 }}>
+            Danger Zone
+          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography>Delete this repository</Typography>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={openDeleteDialog}
+              startIcon={<Trash />}
+            >
+              Delete
+            </Button>
+          </Box>
+        </Paper>
+      )}
+
+    {userData?.username === username &&
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDeleteRepo}
+        title="Delete Repository"
+        message={`Are you sure you want to delete the repository "${repo?.name}"? This action cannot be undone.`}
+      />}
     </Container>
   );
 };

@@ -18,7 +18,6 @@ public class ActivityLogService {
     // Convert DTO to Entity
     private ActivityLog mapToEntity(ActivityLogDTO dto) {
         ActivityLog log = new ActivityLog();
-        log.setId(dto.getId());
         log.setUserId(dto.getUserId());
         log.setRepositoryId(dto.getRepositoryId());
         log.setBranchId(dto.getBranchId());

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Container,
   Typography,
@@ -23,19 +23,19 @@ import {
 } from '@mui/material';
 import { Search, Star, GitFork, Code } from 'lucide-react';
 import instance from '../services/axiosConfig';
+import { showNotification } from '../redux/notificationSlice';
+import ConfirmationDialog from './ConfirmationDialog';
 
 const RepositoriesPage = () => {
   const { username } = useParams();
   const [repos, setRepos] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [openNewRepo, setOpenNewRepo] = useState(false);
-  const [newRepo, setNewRepo] = useState({
-    name: '',
-    description: '',
-    isPublic: true,
-  });
-  const [error, setError] = useState('');
+  const [newRepo, setNewRepo] = useState({ name: '', description: '', isPublic: true });
+  const [selectedRepo, setSelectedRepo] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const userData = useSelector(state => state.user);
 
   const fetchRepos = async (userName) => {
@@ -43,9 +43,8 @@ const RepositoriesPage = () => {
       const response = await instance.get(`/repositories/user/${userName}`);
       const modifiedData = response.data.map((item) => ({...item, isPublic: item.public}))
       setRepos(modifiedData);
-      console.log(modifiedData)
     } catch (err) {
-      navigate('/error', { state: { code: 401 } });
+      dispatch(showNotification({ message: "Failed to fetch repositories.", type: "error" }));
     }
   };
 
@@ -59,21 +58,43 @@ const RepositoriesPage = () => {
     }
   }, [username]);
 
+  const validateRepositoryForm = () => {
+    let error = "";
+  
+    if (!newRepo.name) {
+      error = "Repository name can't be empty";
+    } else if (newRepo.name.length > 100) {
+      error = "Repository name should not exceed 100 characters";
+    } else if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(newRepo.name)) {
+      error = "Repository name must start with an alphabet and contain only alphanumeric characters or underscores";
+    }
+
+    return error;
+  };
+
   const handleCreateRepo = async () => {
-    try {
-      const response = await instance.post('/repositories', {
-        name: newRepo.name,
-        description: newRepo.description,
-        ownerUsername: userData.username,
-        isPublic: newRepo.isPublic,
-      });
-      setRepos([...repos, response.data]);
-      setOpenNewRepo(false);
-      setNewRepo({ name: '', description: '', isPublic: true });
-      setError('');
-      navigate(`/${userData.username}/${response.data.name}`);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create repository');
+    if (userData?.username === username) {
+      try {
+        const error = validateRepositoryForm();
+
+        if (error !== "") {
+          dispatch(showNotification({ message: error, type: "error" }));
+          return;
+        }
+        const response = await instance.post('/repositories', {
+          name: newRepo.name,
+          description: newRepo.description,
+          ownerUsername: userData.username,
+          isPublic: newRepo.isPublic,
+        });
+        setRepos([...repos, {...response.data, isPublic: response.data.public !== null ? response.data.public : response.data.isPublic !== null ? response.data.isPublic: true}]);
+        setOpenNewRepo(false);
+        setNewRepo({ name: '', description: '', isPublic: true });
+        dispatch(showNotification({ message: "Repository created successfully!", type: "success" }));
+        navigate(`/${userData.username}/${response.data.name}`);
+      } catch (err) {
+        dispatch(showNotification({ message: err.response?.data?.message || 'Failed to create repository.', type: "error" }));
+      }
     }
   };
 
@@ -87,7 +108,7 @@ const RepositoriesPage = () => {
         <Typography variant="h4">
           {username ? `${username}'s Repositories` : 'Your Repositories'}
         </Typography>
-        {(!username || username === userData?.username) && (
+        {(username === userData?.username) && (
           <Button
             variant="contained"
             color="primary"
@@ -115,7 +136,7 @@ const RepositoriesPage = () => {
       />
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {filteredRepos.filter(r => (r.public || r.ownerUsername == userData.username) ).map((repo) => (
+        {filteredRepos.map((repo) => (
           <Paper key={repo.id} sx={{ p: 3 }}>
             <Grid2 container spacing={2}>
               <Grid2 item xs={12}>
@@ -164,6 +185,7 @@ const RepositoriesPage = () => {
         ))}
       </Box>
 
+      {userData?.username === username &&
       <Dialog open={openNewRepo} onClose={() => setOpenNewRepo(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Create a new repository</DialogTitle>
         <DialogContent>
@@ -173,8 +195,6 @@ const RepositoriesPage = () => {
               fullWidth
               value={newRepo.name}
               onChange={(e) => setNewRepo({ ...newRepo, name: e.target.value })}
-              error={!!error}
-              helperText={error}
               sx={{ mb: 2 }}
             />
             <TextField
@@ -203,7 +223,7 @@ const RepositoriesPage = () => {
             Create repository
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog>}
     </Container>
   );
 };

@@ -61,11 +61,11 @@ CREATE TABLE `commits` (
   `user_id` bigint NOT NULL,
   `is_deleted` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`id`),
-  KEY `repository_id` (`repository_id`),
-  KEY `branch_id` (`branch_id`),
   KEY `user_id` (`user_id`),
-  CONSTRAINT `commits_ibfk_1` FOREIGN KEY (`repository_id`) REFERENCES `repositories` (`id`),
-  CONSTRAINT `commits_ibfk_2` FOREIGN KEY (`branch_id`) REFERENCES `branches` (`id`),
+  KEY `commits_ibfk_1` (`repository_id`),
+  KEY `commits_ibfk_2` (`branch_id`),
+  CONSTRAINT `commits_ibfk_1` FOREIGN KEY (`repository_id`) REFERENCES `repositories` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `commits_ibfk_2` FOREIGN KEY (`branch_id`) REFERENCES `branches` (`id`) ON DELETE CASCADE,
   CONSTRAINT `commits_ibfk_3` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 );
 

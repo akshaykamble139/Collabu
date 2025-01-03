@@ -17,6 +17,7 @@ import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import com.akshay.Collabu.dto.RepositoryDTO;
 import com.akshay.Collabu.models.Repository_;
@@ -171,11 +172,17 @@ class RepositoryServiceTest {
         
     @Test
     void testDeleteRepository() {
+    	
+    	UserDetails userDetails  = org.springframework.security.core.userdetails.User.builder()
+        .username("test")
+        .password("test123")
+        .roles("USER") // Remove ROLE_ prefix for Spring Security
+        .build();
                         
         when(repositoryRepository.existsById(anyLong())).thenReturn(false);
         
         try {
-        	repositoryService.deleteRepository(1L);
+        	repositoryService.deleteRepository(1L, userDetails);
         }
         catch (Exception e) {
 			logger.info("Repository doesn't exist for id: {}", 1L);
@@ -183,7 +190,7 @@ class RepositoryServiceTest {
 
         when(repositoryRepository.existsById(anyLong())).thenReturn(true);
 
-    	repositoryService.deleteRepository(1L);       
+    	repositoryService.deleteRepository(1L, userDetails);       
     }
     
 }
