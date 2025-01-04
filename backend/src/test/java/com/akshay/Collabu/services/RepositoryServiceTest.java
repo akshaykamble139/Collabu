@@ -79,7 +79,7 @@ class RepositoryServiceTest {
         when(repositoryRepository.findById(anyLong())).thenReturn(Optional.empty());
 
         try {
-        RepositoryDTO result = repositoryService.getRepositoryById(1L);
+        repositoryService.getRepositoryById(1L);
         }
         catch (Exception e) {
 			logger.info("Repository doesn't exist for id: {}", 1L);
@@ -106,7 +106,7 @@ class RepositoryServiceTest {
         repo.setStarsCount(0L);
         repo.setForksCount(0L);
         
-        RepositoryDTO repositoryDTO = new RepositoryDTO(repo.getId(), repo.getName(), repo.getDescription(), user.getUsername(), true, false, null);
+        RepositoryDTO repositoryDTO = repositoryService.mapEntityToDTO(repo);
 
     	when(repositoryRepository.existsByNameAndOwnerId(anyString(),anyLong())).thenReturn(true);
 
@@ -131,7 +131,7 @@ class RepositoryServiceTest {
         RepositoryDTO result = repositoryService.createRepository(repositoryDTO);
         assertEquals("TestRepo", result.getName());
         
-        repositoryDTO.setForked(true);
+        repositoryDTO.setRepositoryForkedOrNot(true);
         repositoryDTO.setParentRepositoryId(5L);
         
         repo.setForkedFrom(repo);
@@ -160,7 +160,7 @@ class RepositoryServiceTest {
         repo.setStarsCount(0L);
         repo.setForksCount(0L);
         
-        RepositoryDTO repositoryDTO = new RepositoryDTO(repo.getId(), repo.getName(), repo.getDescription(), user.getUsername(), true, false, null);
+        RepositoryDTO repositoryDTO = repositoryService.mapEntityToDTO(repo);
                         
         when(repositoryRepository.findById(anyLong())).thenReturn(Optional.of(repo));
         

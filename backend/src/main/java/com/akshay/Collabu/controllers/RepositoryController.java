@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.akshay.Collabu.dto.ForkRequestDTO;
 import com.akshay.Collabu.dto.RepositoryDTO;
 import com.akshay.Collabu.services.RepositoryService;
 
@@ -59,5 +60,11 @@ public class RepositoryController {
 	        return ResponseEntity.status(HttpStatusCode.valueOf(204)).body("Account deleted succesfully!");
     }
 
+    
+    @PostMapping("/fork")
+    public ResponseEntity<RepositoryDTO> forkRepository(@RequestBody @Valid ForkRequestDTO forkRequestDTO, @AuthenticationPrincipal UserDetails userDetails) {
+    	RepositoryDTO forkedRepo = repositoryService.forkRepository(forkRequestDTO,userDetails);
+        return ResponseEntity.status(HttpStatus.CREATED).body(forkedRepo);
+    }
 }
 

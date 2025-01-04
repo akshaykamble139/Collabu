@@ -13,4 +13,5 @@ public interface StarRepository extends JpaRepository<Star, Long> {
     List<Star> findByUserId(Long userId);
     List<Star> findByRepositoryId(Long repositoryId);
     Optional<Star> findByUserIdAndRepositoryId(Long userId, Long repositoryId);
+	Long countByRepositoryIdAndIsActiveTrue(Long repositoryId);
 }

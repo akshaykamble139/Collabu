@@ -5,9 +5,10 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
-@AllArgsConstructor
+@NoArgsConstructor
 public class RepositoryDTO {
     private Long id;
     
@@ -23,8 +24,11 @@ public class RepositoryDTO {
     @Pattern(regexp = "^[a-zA-Z][a-zA-Z0-9_]*$", message = "Repository owner username must start with an alphabet and can contain alphanumeric characters or underscores")
     private String ownerUsername;
         
-    private boolean isPublic = true;
+    private boolean publicRepositoryOrNot = true;
     
-    private boolean isForked = false;
+    private boolean repositoryForkedOrNot = false;
     private Long parentRepositoryId; // ID of the parent repository if it's a fork
+    
+    private Long starCount = 0L;
+    private Long forkCount = 0L;
 }

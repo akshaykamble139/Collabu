@@ -6,5 +6,6 @@ public enum ActivityAction {
     COMMIT,
     CREATE_PULL_REQUEST,
     MERGE_PULL_REQUEST,
-    STAR_REPOSITORY
+    STAR_REPOSITORY,
+    FORK_REPOSITORY,
 }

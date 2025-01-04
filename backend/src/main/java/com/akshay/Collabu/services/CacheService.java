@@ -1,10 +1,15 @@
 package com.akshay.Collabu.services;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.akshay.Collabu.models.Repository_;
+import com.akshay.Collabu.repositories.RepositoryRepository;
+import com.akshay.Collabu.repositories.StarRepository;
 import com.akshay.Collabu.repositories.UserRepository;
 
 import jakarta.annotation.PostConstruct;
@@ -15,12 +20,21 @@ public class CacheService {
     // Cache for userId ↔ username
     private final Map<Long, String> userIdToUsernameCache = new ConcurrentHashMap<>();
     private final Map<String, Long> usernameToUserIdCache = new ConcurrentHashMap<>();
+    
+    // Cache for star count of repository
+    private final Map<Long, Long> repositoryStarCache = new ConcurrentHashMap<>();
 
-    private final UserRepository userRepository;
+    // Cache for fork count of repository
+    private final Map<Long, Long> repositoryForkCache = new ConcurrentHashMap<>();
 
-    public CacheService(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private StarRepository starRepository;
+
+    @Autowired
+    private RepositoryRepository repositoryRepository;
 
     // Load cache at startup
     @PostConstruct
@@ -28,6 +42,17 @@ public class CacheService {
         userRepository.findAll().forEach(user -> {
             userIdToUsernameCache.put(user.getId(), user.getUsername());
             usernameToUserIdCache.put(user.getUsername(), user.getId());
+        });
+        
+        repositoryRepository.findAll().forEach(repo -> {
+            repositoryStarCache.put(repo.getId(), starRepository.countByRepositoryIdAndIsActiveTrue(repo.getId()));
+        });
+        
+        List<Object[]> forkCounts = repositoryRepository.countForksForAllRepositories();
+        forkCounts.forEach(result -> {
+            Long repositoryId = (Long) result[0];
+            Long forkCount = (Long) result[1];
+            repositoryForkCache.put(repositoryId, forkCount);
         });
     }
 
@@ -68,11 +93,48 @@ public class CacheService {
                 })
                 .orElse(null);
     }
+    
+    public void updateRepositoryStarCount(Long repositoryId, Long starCount) {
+        repositoryStarCache.put(repositoryId, starCount);
+    }
+    
+    public Long getRepositoryStarCount(Long repositoryId) {
+    	if (repositoryStarCache.containsKey(repositoryId)) {
+    		return repositoryStarCache.get(repositoryId);
+    	}
+        return fetchAndCacheStarCount(repositoryId);
+    }
+
+    private Long fetchAndCacheStarCount(Long repositoryId) {
+        Long starCount = starRepository.countByRepositoryIdAndIsActiveTrue(repositoryId);
+        repositoryStarCache.put(repositoryId, starCount);
+        return starCount;
+    }
+
+ // Fork cache methods
+    public void updateRepositoryForkCount(Long repositoryId, Long forkCount) {
+        repositoryForkCache.put(repositoryId, forkCount);
+    }
+
+    public Long getRepositoryForkCount(Long repositoryId) {
+        if (repositoryForkCache.containsKey(repositoryId)) {
+            return repositoryForkCache.get(repositoryId);
+        }
+        return fetchAndCacheForkCount(repositoryId);
+    }
+
+    private Long fetchAndCacheForkCount(Long repositoryId) {
+    	Long forkCount = repositoryRepository.countByForkedFromId(repositoryId);
+        repositoryForkCache.put(repositoryId, forkCount);
+        return forkCount;
+    }
+
 
     // Optional: Clear cache manually (for admin actions)
     public void clearCache() {
         userIdToUsernameCache.clear();
         usernameToUserIdCache.clear();
+        repositoryStarCache.clear();
         loadCache();
     }
 }

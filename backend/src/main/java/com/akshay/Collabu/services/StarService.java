@@ -13,6 +13,8 @@ import com.akshay.Collabu.repositories.RepositoryRepository;
 import com.akshay.Collabu.repositories.StarRepository;
 import com.akshay.Collabu.repositories.UserRepository;
 
+import jakarta.transaction.Transactional;
+
 @Service
 public class StarService {
     @Autowired
@@ -32,6 +34,7 @@ public class StarService {
         return stars.size();
     }
     
+    @Transactional
     public StarDTO toggleStar(String username, StarDTO starDTO) {
     	Long userId = cacheService.getUserId(username);
     	if (userId == null) {
@@ -61,6 +64,13 @@ public class StarService {
         }
 
         Star savedStar = starRepository.save(star);
+        
+     // Update star count in cache
+        Long updatedStarCount = starRepository.countByRepositoryIdAndIsActiveTrue(repositoryId);
+        cacheService.updateRepositoryStarCount(repositoryId, updatedStarCount);
+        
+     // Persist updated count to repository
+        repositoryRepository.updateStarsCount(repositoryId, updatedStarCount);
         
         return new StarDTO(savedStar.getId(), savedStar.getRepository().getId(), savedStar.getIsActive());
     }

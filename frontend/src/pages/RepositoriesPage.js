@@ -13,27 +13,21 @@ import {
   TextField,
   FormControlLabel,
   Switch,
-  Divider,
   Paper,
   Grid2,
-  slotProps,
-  IconButton,
   InputAdornment,
   Chip,
 } from '@mui/material';
 import { Search, Star, GitFork, Code } from 'lucide-react';
 import instance from '../services/axiosConfig';
 import { showNotification } from '../redux/notificationSlice';
-import ConfirmationDialog from './ConfirmationDialog';
 
 const RepositoriesPage = () => {
   const { username } = useParams();
   const [repos, setRepos] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [openNewRepo, setOpenNewRepo] = useState(false);
-  const [newRepo, setNewRepo] = useState({ name: '', description: '', isPublic: true });
-  const [selectedRepo, setSelectedRepo] = useState(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [newRepo, setNewRepo] = useState({ name: '', description: '', publicRepositoryOrNot: true });
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const userData = useSelector(state => state.user);
@@ -41,8 +35,7 @@ const RepositoriesPage = () => {
   const fetchRepos = async (userName) => {
     try {
       const response = await instance.get(`/repositories/user/${userName}`);
-      const modifiedData = response.data.map((item) => ({...item, isPublic: item.public}))
-      setRepos(modifiedData);
+      setRepos(response.data);
     } catch (err) {
       dispatch(showNotification({ message: "Failed to fetch repositories.", type: "error" }));
     }
@@ -85,11 +78,11 @@ const RepositoriesPage = () => {
           name: newRepo.name,
           description: newRepo.description,
           ownerUsername: userData.username,
-          isPublic: newRepo.isPublic,
+          publicRepositoryOrNot: newRepo.publicRepositoryOrNot,
         });
-        setRepos([...repos, {...response.data, isPublic: response.data.public !== null ? response.data.public : response.data.isPublic !== null ? response.data.isPublic: true}]);
+        setRepos([...repos, response.data]);
         setOpenNewRepo(false);
-        setNewRepo({ name: '', description: '', isPublic: true });
+        setNewRepo({ name: '', description: '', publicRepositoryOrNot: true });
         dispatch(showNotification({ message: "Repository created successfully!", type: "success" }));
         navigate(`/${userData.username}/${response.data.name}`);
       } catch (err) {
@@ -151,7 +144,7 @@ const RepositoriesPage = () => {
                     </Typography>
                   </Link>
                   <Chip
-                    label={repo.isPublic ? 'Public' : 'Private'}
+                    label={repo.publicRepositoryOrNot ? 'Public' : 'Private'}
                     size="small"
                     sx={{ ml: 1 }}
                   />
@@ -166,16 +159,16 @@ const RepositoriesPage = () => {
               )}
               <Grid2 item xs={12}>
                 <Box sx={{ display: 'flex', gap: 2 }}>
-                  {repo.starsCount > 0 && (
+                  {repo.starCount > 0 && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <Star size={16} />
-                      <Typography variant="body2">{repo.starsCount}</Typography>
+                      <Typography variant="body2">{repo.starCount}</Typography>
                     </Box>
                   )}
-                  {repo.forksCount > 0 && (
+                  {repo.forkCount > 0 && (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                       <GitFork size={16} />
-                      <Typography variant="body2">{repo.forksCount}</Typography>
+                      <Typography variant="body2">{repo.forkCount}</Typography>
                     </Box>
                   )}
                 </Box>
@@ -209,11 +202,11 @@ const RepositoriesPage = () => {
             <FormControlLabel
               control={
                 <Switch
-                  checked={newRepo.isPublic}
-                  onChange={(e) => setNewRepo({ ...newRepo, isPublic: e.target.checked })}
+                  checked={newRepo.publicRepositoryOrNot}
+                  onChange={(e) => setNewRepo({ ...newRepo, publicRepositoryOrNot: e.target.checked })}
                 />
               }
-              label={newRepo.isPublic ? 'Public' : 'Private'}
+              label={newRepo.publicRepositoryOrNot ? 'Public' : 'Private'}
             />
           </Box>
         </DialogContent>

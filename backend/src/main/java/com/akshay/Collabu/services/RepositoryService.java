@@ -1,6 +1,7 @@
 package com.akshay.Collabu.services;
 
 import java.time.LocalDateTime;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -10,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.akshay.Collabu.dto.ForkRequestDTO;
 import com.akshay.Collabu.dto.RepositoryDTO;
 import com.akshay.Collabu.models.ActivityAction;
 import com.akshay.Collabu.models.ActivityLog;
@@ -22,9 +24,11 @@ import com.akshay.Collabu.repositories.BranchRepository;
 import com.akshay.Collabu.repositories.CommitRepository;
 import com.akshay.Collabu.repositories.FileRepository;
 import com.akshay.Collabu.repositories.RepositoryRepository;
+import com.akshay.Collabu.repositories.StarRepository;
 import com.akshay.Collabu.repositories.UserRepository;
 
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
 
 @Service
 public class RepositoryService {
@@ -44,6 +48,9 @@ public class RepositoryService {
     private FileRepository fileRepository;
     
     @Autowired
+    private StarRepository starRepository;
+    
+    @Autowired
     private ActivityLogRepository activityLogRepository;
     
     @Autowired
@@ -55,17 +62,22 @@ public class RepositoryService {
         return mapEntityToDTO(repo);
     }
 
-	private RepositoryDTO mapEntityToDTO(Repository_ repo) {
-		return new RepositoryDTO(
-        		repo.getId(), 
-        		repo.getName(), 
-        		repo.getDescription(), 
-        		repo.getOwner().getUsername(), 
-        		repo.getVisibility().equals("public"),
-                repo.getForksCount() != null && repo.getForksCount() > 0,
-                repo.getForkedFrom() != null ? repo.getForkedFrom().getId() : null);
+	public RepositoryDTO mapEntityToDTO(Repository_ repo) {
+		RepositoryDTO resultDto = new RepositoryDTO();
+		resultDto.setId(repo.getId()); 
+        resultDto.setName(repo.getName());
+        resultDto.setDescription(repo.getDescription());
+        resultDto.setOwnerUsername(repo.getOwner().getUsername());
+        resultDto.setPublicRepositoryOrNot(repo.getVisibility().equals("public"));
+        resultDto.setRepositoryForkedOrNot(repo.getForksCount() != null && repo.getForksCount() > 0);
+        resultDto.setParentRepositoryId(repo.getForkedFrom() != null ? repo.getForkedFrom().getId() : null);
+        resultDto.setStarCount(repo.getStarsCount());
+        resultDto.setForkCount(repo.getForksCount());
+        
+        return resultDto;
 	}
 
+	@Transactional
     public RepositoryDTO createRepository(RepositoryDTO repositoryDTO) {
     	Long ownerId = cacheService.getUserId(repositoryDTO.getOwnerUsername());
     	
@@ -84,10 +96,10 @@ public class RepositoryService {
         repository.setDescription(repositoryDTO.getDescription());
         repository.setOwner(userRepository.findById(ownerId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Owner not found")));
-        repository.setVisibility(repositoryDTO.isPublic() ? "public" : "private"); // Set visibility
+        repository.setVisibility(repositoryDTO.isPublicRepositoryOrNot() ? "public" : "private"); // Set visibility
 
         // If it's a fork, associate it with the parent repository
-        if (repositoryDTO.isForked() && repositoryDTO.getParentRepositoryId() != null) {
+        if (repositoryDTO.isRepositoryForkedOrNot() && repositoryDTO.getParentRepositoryId() != null) {
             Repository_ parentRepo = repositoryRepository.findById(repositoryDTO.getParentRepositoryId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Parent repository not found for forking."));
             repository.setForkedFrom(parentRepo);
@@ -206,12 +218,86 @@ public class RepositoryService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"User id doesn't exist for this username");    		
     	}
     	
-    	List<Repository_> repositories = repositoryRepository.findByOwnerId(ownerId);
-        return repositories.stream()
-        		.filter(repo -> repo.getVisibility().equalsIgnoreCase("public") 
-        				|| repo.getVisibility().equalsIgnoreCase("private") && repo.getOwner().getUsername().equals(userDetails.getUsername()))
-                .map(repo -> mapEntityToDTO(repo))
-                .collect(Collectors.toList());
+    	List<Repository_> repositories = repositoryRepository.findByOwnerId(ownerId)
+    									.stream()
+    									.filter(repo -> repo.getVisibility().equalsIgnoreCase("public") 
+    					        				|| repo.getVisibility().equalsIgnoreCase("private") && repo.getOwner().getUsername().equals(userDetails.getUsername()))
+    									.map(repo -> {
+    								        repo.setStarsCount(cacheService.getRepositoryStarCount(repo.getId()));
+    								        return repo;
+    								    })
+    									.collect(Collectors.toList());
+    	
+        return repositories.stream().map(repo -> mapEntityToDTO(repo)).collect(Collectors.toList());
 	}
+
+	@Transactional
+	public RepositoryDTO forkRepository(ForkRequestDTO forkRequestDTO, UserDetails userDetails) {
+		
+		Repository_ parentRepo = repositoryRepository.findById(forkRequestDTO.getRepositoryId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Repository not found"));
+						
+		Long ownerId = cacheService.getUserId(userDetails.getUsername());
+    	
+    	if (ownerId == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"User id doesn't exist for this username");    		
+    	}
+        // Check if a repository with the same name already exists for the user
+        boolean exists = repositoryRepository.existsByNameAndOwnerId(forkRequestDTO.getName(), ownerId);
+        if (exists) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,"Repository with this name already exists for the user.");
+        }
+
+        // Create and populate the repository object
+        Repository_ repository = new Repository_();
+        repository.setName(forkRequestDTO.getName());
+        repository.setDescription(parentRepo.getDescription());
+        repository.setOwner(userRepository.findById(ownerId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Owner not found")));
+        repository.setVisibility("public"); // Set visibility
+
+        // It's a fork so associating it with the parent repository
+        repository.setForkedFrom(parentRepo);
+            
+        // Increment fork count of parent repository
+        Long forkCount = cacheService.getRepositoryForkCount(forkRequestDTO.getRepositoryId()) + 1;
+        cacheService.updateRepositoryForkCount(forkRequestDTO.getRepositoryId(), forkCount);
+        
+        parentRepo.setForksCount(forkCount);
+        repositoryRepository.save(parentRepo);  // Save updated fork count
+
+        // Save and return the created repository as DTO
+        Repository_ savedRepo = repositoryRepository.save(repository);
+        
+        // Create 'main' branch automatically
+        Branch mainBranch = new Branch();
+        mainBranch.setName("main");
+        mainBranch.setRepository(savedRepo);
+        mainBranch.setIsDefault(true);
+        branchRepository.save(mainBranch);
+        
+        // ==== Create Initial Commit ====
+        Commit initialCommit = new Commit();
+        initialCommit.setMessage("Forked from " + parentRepo.getOwner().getUsername() + "/" + parentRepo.getName());
+        initialCommit.setRepository(savedRepo);
+        initialCommit.setBranch(mainBranch);
+        initialCommit.setUser(savedRepo.getOwner());
+        initialCommit.setTimestamp(LocalDateTime.now());
+		Commit savedCommit = commitRepository.save(initialCommit);
+
+        // Update branch with the commit
+        mainBranch.setLastCommit(savedCommit);
+        branchRepository.save(mainBranch);
+
+        // Log activity
+        ActivityLog log = new ActivityLog();
+        log.setAction(ActivityAction.FORK_REPOSITORY);
+        log.setUserId(savedRepo.getOwner().getId());
+        log.setRepositoryId(savedRepo.getId());
+        log.setBranchId(mainBranch.getId());
+        log.setTimestamp(LocalDateTime.now());
+        activityLogRepository.save(log);
+        return mapEntityToDTO(savedRepo);
+    }
 }
 

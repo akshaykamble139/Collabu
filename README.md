@@ -76,7 +76,11 @@ The Code Collaboration Platform is a portfolio project designed to simulate a Gi
 
 ---
 
-#### **Current Version:** v0.18
+#### **Current Version:** v0.19
+
+On RepositoryPage star and fork count displayed. Buttons added to update the count for the repository. New caches added to track current star and fork counts for each repository.
+
+#### v0.18
 
 RepositoriesPage and RepositoryPage modified according to their requirements in user journeys. Alert popups, validation, error messages all changed and now using reusable global components of confirmation dialog and global notification instead of basic browser alert box. Deletion of repository entity is handled manually by deleting all objects associated with this repository.
 

@@ -15,7 +15,11 @@ import {
   List,
   ListItem,
   ListItemText,
-  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  TextField,
+  DialogActions,
 } from '@mui/material';
 import {
   Star,
@@ -44,6 +48,8 @@ const RepositoryPage = () => {
   const [newBranchName, setNewBranchName] = useState('');
   const [alertMessage, setAlertMessage] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [forkDialogOpen, setForkDialogOpen] = useState(false);
+  const [forkedRepoName, setForkRepoName] = useState(repoName);
   const [isStarred, setIsStarred] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -53,8 +59,7 @@ const RepositoryPage = () => {
     const fetchRepo = async () => {
       try {
         const response = await instance.get(`/repositories/${username}/${repoName}`);
-        const modifiedData = {...response.data, isPublic: response.data.public};
-        setRepo(modifiedData);
+        setRepo(response.data);
 
         // Fetch branches and files
         const branchesResponse = await instance.get(`/branches/repository/${response.data.id}`);
@@ -121,17 +126,35 @@ const RepositoryPage = () => {
 
   const handleToggleStar = async () => {
     try {
-      await instance.post('/stars/toggle', { repositoryId: repo.id });
-      setIsStarred((prev) => (!prev.isStarred));
+      const response = await instance.post('/stars/toggle', { repositoryId: repo.id });
+      setIsStarred(response.data === "Starred");
+      setRepo(prev => ({ ...prev, starsCount: isStarred ? prev.starsCount - 1 : prev.starsCount + 1 }));
       setAlertMessage({
         type: 'success',
         text: isStarred ? 'Repository unstarred!' : 'Repository starred!',
       });
+      dispatch(showNotification({ message: isStarred ? 'Repository unstarred!' : 'Repository starred!', type: "success" }));
+
     } catch (err) {
-      setAlertMessage({ type: 'error', text: 'Failed to toggle star.' });
+      dispatch(showNotification({ message: err?.response?.data?.message || 'Failed to toggle star.', type: "error" }));
     }
   };
 
+  const handleFork = async () => {
+    try {
+      const response = await instance.post('/repositories/fork', { repositoryId: repo.id, name: forkedRepoName });
+      setRepo(prev => ({ ...prev, forksCount: prev.forksCount + 1 }));
+      dispatch(showNotification({ type: 'success', message: 'Repository forked successfully!' }));
+      setForkDialogOpen(false);
+      navigate(`/${username}/repositories`);
+    } catch (err) {
+      dispatch(showNotification({ type: 'error', message: err?.response?.data?.message || 'Failed to fork repository.' }));
+    }
+  };
+
+  const openForkDialog = () => {
+    setForkDialogOpen(true);
+  };
 
    const openDeleteDialog = () => {
       setDeleteDialogOpen(true);
@@ -177,11 +200,13 @@ const RepositoryPage = () => {
                 borderColor: 'divider',
               }}
             >
-              {repo.isPublic ? 'Public' : 'Private'}
+              {repo.publicRepositoryOrNot ? 'Public' : 'Private'}
             </Typography>
           </Box>
           
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Typography variant="body2"><Star size={16} /> {repo.starCount} Stars</Typography>
+            <Typography variant="body2"><GitFork size={16} /> {repo.forkCount} Forks</Typography>
             <Button
               variant={isStarred ? 'contained' : 'outlined'}
               startIcon={<Star />}
@@ -195,6 +220,7 @@ const RepositoryPage = () => {
               disabled={userData?.username === username}
               startIcon={<GitFork />}
               size="small"
+              onClick={openForkDialog}
             >
               Fork
             </Button>
@@ -280,6 +306,23 @@ const RepositoryPage = () => {
           </Box>
         </Paper>
       )}
+
+    <Dialog open={forkDialogOpen} onClose={() => setForkDialogOpen(false)}>
+      <DialogTitle>Fork Repository</DialogTitle>
+      <DialogContent>
+        <TextField
+          label="Repository Name"
+          value={repoName}
+          onChange={(e) => setForkRepoName(e.target.value)}
+          fullWidth
+          margin="dense"
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setForkDialogOpen(false)} color="inherit">Cancel</Button>
+        <Button onClick={handleFork} variant="contained">Fork</Button>
+      </DialogActions>
+    </Dialog>
 
     {userData?.username === username &&
       <ConfirmationDialog
