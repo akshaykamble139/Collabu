@@ -61,7 +61,7 @@ class CustomUserDetailsServiceTest {
         Mockito.when(userRepository.findByUsername(anyString())).thenReturn(Optional.empty());
 
         try {
-            UserDetails result = userDetailsService.loadUserByUsername("john_doe");
+            userDetailsService.loadUserByUsername("john_doe");
 		} catch (Exception e) {
 			logger.info("used doesn't exist for username: {}", mockUser.getUsername());
 		}

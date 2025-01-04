@@ -7,7 +7,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.akshay.Collabu.models.Repository_;
 import com.akshay.Collabu.repositories.RepositoryRepository;
 import com.akshay.Collabu.repositories.StarRepository;
 import com.akshay.Collabu.repositories.UserRepository;
@@ -27,6 +26,10 @@ public class CacheService {
     // Cache for fork count of repository
     private final Map<Long, Long> repositoryForkCache = new ConcurrentHashMap<>();
 
+ // Cache for repositoryId ↔ username-repositoryName
+    private final Map<Long, String> repositoryIdToNameCache = new ConcurrentHashMap<>();
+    private final Map<String, Long> nameToRepositoryIdCache = new ConcurrentHashMap<>();
+
     @Autowired
     private UserRepository userRepository;
     
@@ -45,6 +48,9 @@ public class CacheService {
         });
         
         repositoryRepository.findAll().forEach(repo -> {
+            String key = repo.getOwner().getUsername() + "-" + repo.getName();
+            repositoryIdToNameCache.put(repo.getId(), key);
+            nameToRepositoryIdCache.put(key, repo.getId());
             repositoryStarCache.put(repo.getId(), starRepository.countByRepositoryIdAndIsActiveTrue(repo.getId()));
         });
         
@@ -129,11 +135,69 @@ public class CacheService {
         return forkCount;
     }
 
+ // Get username-repoName by repositoryId
+    public String getRepositoryKey(Long repositoryId) {
+        if (repositoryIdToNameCache.containsKey(repositoryId)) {
+            return repositoryIdToNameCache.get(repositoryId);
+        }
+        return fetchAndCacheRepositoryKey(repositoryId);
+    }
 
-    // Optional: Clear cache manually (for admin actions)
+    // Get repositoryId by username-repoName
+    public Long getRepositoryId(String repositoryKey) {
+        if (nameToRepositoryIdCache.containsKey(repositoryKey)) {
+            return nameToRepositoryIdCache.get(repositoryKey);
+        }
+        return fetchAndCacheRepositoryId(repositoryKey);
+    }
+
+    // Fetch from DB if not in cache (repositoryId → key)
+    private String fetchAndCacheRepositoryKey(Long repositoryId) {
+        return repositoryRepository.findById(repositoryId)
+                .map(repo -> {
+                    String key = repo.getOwner().getUsername() + "-" + repo.getName();
+                    repositoryIdToNameCache.put(repositoryId, key);
+                    nameToRepositoryIdCache.put(key, repositoryId);
+                    return key;
+                })
+                .orElse(null);
+    }
+
+    // Fetch from DB if not in cache (key → repositoryId)
+    private Long fetchAndCacheRepositoryId(String repositoryKey) {
+        String[] parts = repositoryKey.split("-");
+        if (parts.length != 2) return null;
+        String username = parts[0];
+        String repoName = parts[1];
+        
+        return repositoryRepository.findByOwnerUsernameAndName(username, repoName)
+                .map(repo -> {
+                    repositoryIdToNameCache.put(repo.getId(), repositoryKey);
+                    nameToRepositoryIdCache.put(repositoryKey, repo.getId());
+                    return repo.getId();
+                })
+                .orElse(null);
+    }
+
+    public void updateRepositoryKey(Long repositoryId, String username, String repositoryName) {
+        String key = username + "-" + repositoryName;
+        repositoryIdToNameCache.put(repositoryId, key);
+        nameToRepositoryIdCache.put(key, repositoryId);
+    }
+
+    public void removeRepositoryFromCache(Long repositoryId) {
+        String key = repositoryIdToNameCache.remove(repositoryId);
+        if (key != null) {
+            nameToRepositoryIdCache.remove(key);
+        }
+    }
+
+    // Clear cache manually (for admin actions)
     public void clearCache() {
         userIdToUsernameCache.clear();
         usernameToUserIdCache.clear();
+        repositoryIdToNameCache.clear();
+        nameToRepositoryIdCache.clear();
         repositoryStarCache.clear();
         loadCache();
     }

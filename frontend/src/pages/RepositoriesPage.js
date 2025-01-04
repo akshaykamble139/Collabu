@@ -6,10 +6,6 @@ import {
   Typography,
   Box,
   Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
   FormControlLabel,
   Switch,
@@ -21,6 +17,7 @@ import {
 import { Search, Star, GitFork, Code } from 'lucide-react';
 import instance from '../services/axiosConfig';
 import { showNotification } from '../redux/notificationSlice';
+import ConfirmationDialog from './ConfirmationDialog';
 
 const RepositoriesPage = () => {
   const { username } = useParams();
@@ -179,10 +176,14 @@ const RepositoriesPage = () => {
       </Box>
 
       {userData?.username === username &&
-      <Dialog open={openNewRepo} onClose={() => setOpenNewRepo(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Create a new repository</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
+      <ConfirmationDialog
+        open={openNewRepo}
+        onClose={() => setOpenNewRepo(false)}
+        onConfirm={handleCreateRepo}
+        title="Create a new repository"
+        confirmText="Create repository"
+      >
+        <Box sx={{ mt: 2 }}>
             <TextField
               label="Repository name"
               fullWidth
@@ -209,14 +210,7 @@ const RepositoriesPage = () => {
               label={newRepo.publicRepositoryOrNot ? 'Public' : 'Private'}
             />
           </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenNewRepo(false)}>Cancel</Button>
-          <Button onClick={handleCreateRepo} variant="contained" disabled={!newRepo.name}>
-            Create repository
-          </Button>
-        </DialogActions>
-      </Dialog>}
+      </ConfirmationDialog>}
     </Container>
   );
 };

@@ -76,6 +76,10 @@ The Code Collaboration Platform is a portfolio project designed to simulate a Gi
 
 ---
 
+#### **Current Version:** v0.20
+
+ConfirmationDialogue component refactored so that can be reused for more general case. Repository Id cache added for username+repository name and vice versa. Created BranchesPage to list all the branches in repository and added a create branch button to create branch by using a source parent branch.
+
 #### **Current Version:** v0.19
 
 On RepositoryPage star and fork count displayed. Buttons added to update the count for the repository. New caches added to track current star and fork counts for each repository.

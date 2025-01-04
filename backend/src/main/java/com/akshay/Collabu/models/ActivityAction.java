@@ -8,4 +8,5 @@ public enum ActivityAction {
     MERGE_PULL_REQUEST,
     STAR_REPOSITORY,
     FORK_REPOSITORY,
+    CREATE_BRANCH
 }

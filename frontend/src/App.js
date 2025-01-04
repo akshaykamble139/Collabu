@@ -12,6 +12,7 @@ import Header from "./pages/Header";
 import RepositoryPage from "./pages/RepositoryPage";
 import GlobalNotification from "./pages/GlobalNotification";
 import ReactivateAccount from "./pages/ReactivateAccount";
+import BranchesPage from "./pages/BranchesPage";
 
 const App = () => {
   const userData = useSelector(state => state.user);
@@ -22,7 +23,7 @@ const App = () => {
     const token = localStorage.getItem("token");
     const username = localStorage.getItem("username");
 
-  if (typeof(token) !== undefined && typeof(username) != undefined && token && username) {
+  if (typeof(token) !== "undefined" && typeof(username) !== "undefined" && token && username) {
     dispatch(setUser({username: username, token: token}));
     console.log("userdata set",userData);
   }
@@ -47,6 +48,7 @@ const App = () => {
         <Route path="/reactivate" element={<ReactivateAccount />} />
         <Route path="/profile/:username" element={<ProfilePage />} />
         <Route path="/:username/repositories" element={<RepositoriesPage />} />
+        <Route path="/:username/:repoName/branches" element={<BranchesPage />} />
         <Route path="/:username/:repoName" element={<RepositoryPage />} />
         <Route path="*" element={<ErrorPage />} /> 
         </Routes>

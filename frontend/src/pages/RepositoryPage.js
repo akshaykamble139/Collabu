@@ -15,11 +15,7 @@ import {
   List,
   ListItem,
   ListItemText,
-  Dialog,
-  DialogTitle,
-  DialogContent,
   TextField,
-  DialogActions,
 } from '@mui/material';
 import {
   Star,
@@ -306,32 +302,33 @@ const RepositoryPage = () => {
           </Box>
         </Paper>
       )}
-
-    <Dialog open={forkDialogOpen} onClose={() => setForkDialogOpen(false)}>
-      <DialogTitle>Fork Repository</DialogTitle>
-      <DialogContent>
-        <TextField
-          label="Repository Name"
-          value={repoName}
-          onChange={(e) => setForkRepoName(e.target.value)}
-          fullWidth
-          margin="dense"
-        />
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setForkDialogOpen(false)} color="inherit">Cancel</Button>
-        <Button onClick={handleFork} variant="contained">Fork</Button>
-      </DialogActions>
-    </Dialog>
-
+      <ConfirmationDialog
+          open={forkDialogOpen}
+          onClose={() => setForkDialogOpen(false)}
+          onConfirm={handleFork}
+          title="Fork Repository"
+          confirmText="Fork"
+        >
+          <TextField
+            label="Repository Name"
+            value={repoName}
+            onChange={(e) => setForkRepoName(e.target.value)}
+            fullWidth
+            margin="dense"
+          />
+      </ConfirmationDialog>
     {userData?.username === username &&
       <ConfirmationDialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={handleDeleteRepo}
         title="Delete Repository"
-        message={`Are you sure you want to delete the repository "${repo?.name}"? This action cannot be undone.`}
-      />}
+        confirmText="Delete"
+      >
+        <Typography>
+          {`Are you sure you want to delete the repository "${repo?.name}"? This action cannot be undone.`}
+        </Typography>
+      </ConfirmationDialog>}
     </Container>
   );
 };

@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -139,17 +138,14 @@ public class UserService {
 
 	}
 
-	public boolean updatePassword(UserDetails userDetails, UserDetailsDTO userDetailsDTO) {
+	public void updatePassword(UserDetails userDetails, UserDetailsDTO userDetailsDTO) {
 		User user = userRepository.findByUsername(userDetails.getUsername())
     			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 		
 		String password = userDetailsDTO.getPassword();
         user.setPassword(passwordEncoder.encode(password));
 
-        userRepository.save(user);
-        
-		return true;
-		
+        userRepository.save(user);		
 	}
 	
 	public void updateLastLogin(String username) {

@@ -1,17 +1,24 @@
 import React from "react";
-import { Dialog, DialogActions, DialogContent, DialogTitle, Button, Typography } from "@mui/material";
+import { Dialog, DialogActions, DialogContent, DialogTitle, Button } from "@mui/material";
 
-const ConfirmationDialog = ({ open, onClose, onConfirm, title, message }) => {
+const ConfirmationDialog = ({ 
+  open, 
+  onClose, 
+  onConfirm, 
+  title = "Confirm Action", 
+  children, 
+  confirmText = "Confirm" 
+}) => {
+
+  const color = confirmText.toLowerCase().includes("delete") || confirmText.toLowerCase().includes("deactivate") ? "error" : "primary"
   return (
     <Dialog open={open} onClose={onClose}>
-      <DialogTitle>{title || "Confirm Action"}</DialogTitle>
-      <DialogContent>
-        <Typography>{message}</Typography>
-      </DialogContent>
+      <DialogTitle>{title}</DialogTitle>
+      <DialogContent>{children}</DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={onConfirm} color="error" variant="contained">
-          Confirm
+        <Button onClick={onConfirm} color={color} variant="contained">
+          {confirmText}
         </Button>
       </DialogActions>
     </Dialog>

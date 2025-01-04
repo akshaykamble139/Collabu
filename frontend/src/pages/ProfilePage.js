@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Container, Box, Typography, TextField, Button, Avatar, List, ListItem, ListItemText, Divider } from "@mui/material";
+import { Container, Box, Typography, TextField, Button, Avatar } from "@mui/material";
 import instance from "../services/axiosConfig";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -203,12 +203,16 @@ const ProfilePage = () => {
         onClose={() => setDialogOpen(false)}
         onConfirm={handleConfirmDialog}
         title={dialogAction === "delete" ? "Delete Account" : "Deactivate Account"}
-        message={
-          dialogAction === "delete"
-            ? "Are you sure you want to delete your account? This action is irreversible."
-            : "Are you sure you want to deactivate your account?"
-        }
-      />
+        confirmText={dialogAction === "delete" ? "Delete Account" : "Deactivate Account"}
+      >
+        <Typography>
+          {
+            dialogAction === "delete"
+              ? "Are you sure you want to delete your account? This action is irreversible."
+              : "Are you sure you want to deactivate your account?"
+          }        
+        </Typography>
+      </ConfirmationDialog>
     </Container>
   );
 };

@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import com.akshay.Collabu.dto.BranchDTO;
 import com.akshay.Collabu.models.Branch;
@@ -34,6 +35,8 @@ class BranchServiceTest {
     
     @Mock
     private BranchRepository branchRepository;
+    
+    private UserDetails userDetails;
 
     @InjectMocks
     private BranchService branchService;
@@ -41,6 +44,12 @@ class BranchServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        
+        this.userDetails = org.springframework.security.core.userdetails.User.builder()
+        .username("test")
+        .password("testing")
+        .roles("USER") 
+        .build();
     }
 
     @Test
@@ -53,7 +62,7 @@ class BranchServiceTest {
         branches.add(branch);
         when(branchRepository.findByRepositoryId(anyLong())).thenReturn(branches);
 
-        List<BranchDTO> result = branchService.getBranchesByRepoId(1L);
+        List<BranchDTO> result = branchService.getBranchesByRepoId(1L,userDetails);
         assertEquals(1, result.size());
         assertEquals("master", result.get(0).getName());
     }
@@ -83,12 +92,12 @@ class BranchServiceTest {
         branch.setRepository(repo);
         
         
-        BranchDTO branchDTO = new BranchDTO(1L, branch.getName(), repo.getId());
+        BranchDTO branchDTO = branchService.mapEntityToDTO(branch);
         
         when(branchRepository.existsByRepositoryIdAndName(anyLong(), anyString())).thenReturn(true);
         
         try {
-            branchService.createBranch(branchDTO);
+            branchService.createBranch(branchDTO,userDetails);
         }
         catch (Exception e) {
 			logger.info("Branch already exists");
@@ -99,7 +108,7 @@ class BranchServiceTest {
 
         when(branchRepository.save(any())).thenReturn(branch);
 
-        BranchDTO result = branchService.createBranch(branchDTO);
+        BranchDTO result = branchService.createBranch(branchDTO,userDetails);
         assertEquals("master", result.getName());
     }
     

@@ -22,8 +22,9 @@ public interface RepositoryRepository extends JpaRepository<Repository_, Long> {
 	@Query("UPDATE Repository_ r SET r.starsCount = :starsCount WHERE r.id = :repositoryId")
 	void updateStarsCount(@Param("repositoryId") Long repositoryId, @Param("starsCount") Long starsCount);
 	
-	@Query("SELECT r.forkedFrom, COUNT(r) FROM Repository_ r WHERE r.forkedFrom IS NOT NULL GROUP BY r.forkedFrom")
+	@Query("SELECT r.forkedFrom.id, COUNT(r) FROM Repository_ r WHERE r.forkedFrom IS NOT NULL GROUP BY r.forkedFrom")
     List<Object[]> countForksForAllRepositories();
     
     Long countByForkedFromId(Long repositoryId);
+	Optional<Repository_> findByOwnerUsernameAndName(String username, String repoName);
 }

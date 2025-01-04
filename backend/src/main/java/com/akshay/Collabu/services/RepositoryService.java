@@ -1,7 +1,6 @@
 package com.akshay.Collabu.services;
 
 import java.time.LocalDateTime;
-import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -24,11 +23,9 @@ import com.akshay.Collabu.repositories.BranchRepository;
 import com.akshay.Collabu.repositories.CommitRepository;
 import com.akshay.Collabu.repositories.FileRepository;
 import com.akshay.Collabu.repositories.RepositoryRepository;
-import com.akshay.Collabu.repositories.StarRepository;
 import com.akshay.Collabu.repositories.UserRepository;
 
 import jakarta.transaction.Transactional;
-import jakarta.validation.Valid;
 
 @Service
 public class RepositoryService {
@@ -46,9 +43,6 @@ public class RepositoryService {
     
     @Autowired
     private FileRepository fileRepository;
-    
-    @Autowired
-    private StarRepository starRepository;
     
     @Autowired
     private ActivityLogRepository activityLogRepository;
