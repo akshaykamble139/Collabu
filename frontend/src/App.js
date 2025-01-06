@@ -13,6 +13,7 @@ import RepositoryPage from "./pages/RepositoryPage";
 import GlobalNotification from "./pages/GlobalNotification";
 import ReactivateAccount from "./pages/ReactivateAccount";
 import BranchesPage from "./pages/BranchesPage";
+import BranchPage from "./pages/BranchPage";
 
 const App = () => {
   const userData = useSelector(state => state.user);
@@ -49,6 +50,7 @@ const App = () => {
         <Route path="/profile/:username" element={<ProfilePage />} />
         <Route path="/:username/repositories" element={<RepositoriesPage />} />
         <Route path="/:username/:repoName/branches" element={<BranchesPage />} />
+        <Route path="/:username/:repoName/tree/:branchName" element={<BranchPage />} />
         <Route path="/:username/:repoName" element={<RepositoryPage />} />
         <Route path="*" element={<ErrorPage />} /> 
         </Routes>

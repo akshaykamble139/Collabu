@@ -26,7 +26,6 @@ public class FileVersionService {
         dto.setId(fileVersion.getId());
         dto.setFileId(fileVersion.getFile().getId());
         dto.setVersionNumber(fileVersion.getVersionNumber());
-        dto.setContent(fileVersion.getContent());
         dto.setCreatedAt(fileVersion.getCreatedAt());
         return dto;
     } 
@@ -36,7 +35,6 @@ public class FileVersionService {
                 .orElseThrow(() -> new RuntimeException("File not found"));
         fileVersion.setFile(file);
         fileVersion.setVersionNumber(fileVersionDTO.getVersionNumber());
-        fileVersion.setContent(fileVersionDTO.getContent());
 
         FileVersion savedFileVersion = fileVersionRepository.save(fileVersion);
 

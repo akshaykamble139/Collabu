@@ -40,16 +40,19 @@ CREATE TABLE `repositories` (
 CREATE TABLE `files` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
-  `content` text NOT NULL,
   `repository_id` bigint NOT NULL,
+  `branch_id` bigint NOT NULL DEFAULT '1',
   `path` varchar(255) DEFAULT NULL,
-  `type` enum('file','directory') DEFAULT 'file',
+  `type` varchar(255) NOT NULL,
   `size` bigint NOT NULL DEFAULT '0',
   `last_modified_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `is_deleted` tinyint(1) DEFAULT '0',
+  `storage_url` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `repository_id` (`repository_id`),
-  CONSTRAINT `files_ibfk_1` FOREIGN KEY (`repository_id`) REFERENCES `repositories` (`id`)
+  KEY `files_ibfk_2` (`branch_id`),
+  CONSTRAINT `files_ibfk_1` FOREIGN KEY (`repository_id`) REFERENCES `repositories` (`id`),
+  CONSTRAINT `files_ibfk_2` FOREIGN KEY (`branch_id`) REFERENCES `branches` (`id`) ON DELETE CASCADE
 );
 
 CREATE TABLE `commits` (
@@ -146,9 +149,9 @@ CREATE TABLE `file_versions` (
   `file_id` bigint NOT NULL,
   `version_number` int NOT NULL,
   `commit_id` bigint NOT NULL,
-  `content` text, -- Optional: Store content directly or as a reference to AWS S3
-  `size` bigint DEFAULT 0,
+  `size` bigint DEFAULT '0',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `hash` varchar(64) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `file_id` (`file_id`),
   KEY `commit_id` (`commit_id`),
@@ -180,3 +183,10 @@ CREATE TABLE `merge_conflicts` (
   CONSTRAINT `merge_conflicts_ibfk_2` FOREIGN KEY (`file_id`) REFERENCES `files` (`id`)
 );
 
+CREATE TABLE `file_contents` (
+  `hash` varchar(64) NOT NULL,
+  `content` longblob,
+  `storage_url` varchar(255) DEFAULT NULL,
+  `location` enum('DB','S3') NOT NULL DEFAULT 'DB',
+  PRIMARY KEY (`hash`)
+);

@@ -66,6 +66,9 @@ public class BranchService {
     	
         // Check if a branch with the same name already exists for this repository
     	Long repositoryId = cacheService.getRepositoryId(userDetails.getUsername() + "-" + branchDTO.getRepositoryName());
+    	if (repositoryId == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Repository not found");
+    	}
         boolean exists = branchRepository.existsByRepositoryIdAndName(repositoryId,branchDTO.getName());
         if (exists) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Branch with this name already exists for this repository.");

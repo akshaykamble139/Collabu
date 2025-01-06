@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import com.akshay.Collabu.dto.FileDTO;
 import com.akshay.Collabu.models.File;
@@ -37,9 +38,17 @@ class FileServiceTest {
     @InjectMocks
     private FileService fileService;
 
+	private UserDetails userDetails;
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        
+        this.userDetails = org.springframework.security.core.userdetails.User.builder()
+                .username("test")
+                .password("testing")
+                .roles("USER") 
+                .build();
     }
 
     @Test
@@ -47,8 +56,6 @@ class FileServiceTest {
         File file = new File();
         file.setId(1L);
         file.setName("README.md");
-        file.setContent("Content to use");
-        
         User user = new User();
         user.setId(1L);
         user.setEmail("don@gmail.com");
@@ -79,7 +86,6 @@ class FileServiceTest {
         File file = new File();
         file.setId(1L);
         file.setName("README.md");
-        file.setContent("Content to use");
         
         User user = new User();
         user.setId(1L);
@@ -114,7 +120,6 @@ class FileServiceTest {
         File file = new File();
         file.setId(1L);
         file.setName("README.md");
-        file.setContent("Content to use");
         
         User user = new User();
         user.setId(1L);
@@ -136,12 +141,12 @@ class FileServiceTest {
         file.setRepository(repo);      
         
         
-        FileDTO fileDTO = new FileDTO(file.getId(), file.getName(), file.getContent(), file.getPath(), file.getType(), file.getRepository().getId());
+        FileDTO fileDTO = fileService.mapEntityToDTO(file);
 
         when(repositoryRepository.findById(anyLong())).thenReturn(Optional.empty());
 
         try {
-        	fileService.createFile(fileDTO);
+        	fileService.createFile(fileDTO,null,userDetails);
         }
         catch (Exception e) {
 			logger.info("Repository doesn't exists");
@@ -153,7 +158,6 @@ class FileServiceTest {
         File file = new File();
         file.setId(1L);
         file.setName("README.md");
-        file.setContent("Content to use");
         file.setPath("/");
         
         User user = new User();
@@ -176,14 +180,14 @@ class FileServiceTest {
         file.setRepository(repo);      
         
         
-        FileDTO fileDTO = new FileDTO(file.getId(), file.getName(), file.getContent(), file.getPath(), file.getType(), file.getRepository().getId());
+        FileDTO fileDTO = fileService.mapEntityToDTO(file);
 
         when(repositoryRepository.findById(anyLong())).thenReturn(Optional.of(repo));
         
-        when(fileRepository.existsByNameAndPathAndRepositoryId(anyString(),anyString(),anyLong())).thenReturn(Boolean.TRUE);
+        when(fileRepository.existsByNameAndPathAndBranchId(anyString(),anyString(),anyLong())).thenReturn(Boolean.TRUE);
         
         try {
-        	fileService.createFile(fileDTO);
+        	fileService.createFile(fileDTO,null,userDetails);
         }
         catch (Exception e) {
 			logger.info("File name already exists for this path in given repository");
@@ -195,7 +199,6 @@ class FileServiceTest {
         File file = new File();
         file.setId(1L);
         file.setName("README.md");
-        file.setContent("Content to use");
         file.setPath("/");
         
         User user = new User();
@@ -217,17 +220,15 @@ class FileServiceTest {
         
         file.setRepository(repo);      
         
-        FileDTO fileDTO = new FileDTO(file.getId(), file.getName(), file.getContent(), file.getPath(), file.getType(), file.getRepository().getId());
+        FileDTO fileDTO = fileService.mapEntityToDTO(file);
         
 		when(repositoryRepository.findById(anyLong())).thenReturn(Optional.of(repo));
         
-        when(fileRepository.existsByNameAndPathAndRepositoryId(anyString(),anyString(),anyLong())).thenReturn(false);
+        when(fileRepository.existsByNameAndPathAndBranchId(anyString(),anyString(),anyLong())).thenReturn(false);
         
         when(fileRepository.save(any())).thenReturn(file);       
         
-        FileDTO result = fileService.createFile(fileDTO);
-        
-        assertEquals("README.md", result.getName());
+        fileService.createFile(fileDTO,null, userDetails);
     }
 
     @Test
@@ -252,7 +253,6 @@ class FileServiceTest {
         File file = new File();
         file.setId(1L);
         file.setName("README.md");
-        file.setContent("Content to use");
         file.setPath("/");
         
         User user = new User();
@@ -274,7 +274,7 @@ class FileServiceTest {
         
         file.setRepository(repo);      
         
-        FileDTO fileDTO = new FileDTO(file.getId(), file.getName(), file.getContent(), file.getPath(), file.getType(), file.getRepository().getId());
+        FileDTO fileDTO = fileService.mapEntityToDTO(file);
         
 		when(fileRepository.findById(anyLong())).thenReturn(Optional.empty());
 		try {

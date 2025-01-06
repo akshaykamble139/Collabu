@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -18,13 +19,17 @@ public class S3Controller {
 
     @Autowired
     private S3Service s3Service;
-
-    private final String bucketName = "collabu-files";
+    
+    @Autowired
+    private Environment environment;
 
     @PostMapping("/upload")
     public String uploadFile(@RequestParam("file") MultipartFile file) throws IOException {
         File tempFile = File.createTempFile("temp", file.getOriginalFilename());
         file.transferTo(tempFile);
+        
+        String bucketName = environment.getProperty("aws.s3.bucket.name", "default-bucket");
+        
         s3Service.uploadFile(bucketName, file.getOriginalFilename(), tempFile.toPath());
         return "File uploaded successfully!";
     }

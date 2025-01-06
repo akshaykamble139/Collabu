@@ -10,7 +10,8 @@ import com.akshay.Collabu.models.File;
 @Repository
 public interface FileRepository extends JpaRepository<File, Long> {
     List<File> findByRepositoryId(Long repositoryId);
+    List<File> findByBranchId(Long branchId);
     List<File> findByType(String type); // Fetch files or directories
-    boolean existsByNameAndPathAndRepositoryId(String name, String path, Long repositoryId);
+    boolean existsByNameAndPathAndBranchId(String name, String path, Long branchId);
 }
 

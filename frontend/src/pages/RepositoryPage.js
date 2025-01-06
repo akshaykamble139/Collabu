@@ -16,6 +16,10 @@ import {
   ListItem,
   ListItemText,
   TextField,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
 } from '@mui/material';
 import {
   Star,
@@ -40,8 +44,11 @@ const RepositoryPage = () => {
   const [currentTab, setCurrentTab] = useState(0);
   const [branches, setBranches] = useState([]);
   const [files, setFiles] = useState([]);
-  const [showBranchDialog, setShowBranchDialog] = useState(false);
-  const [newBranchName, setNewBranchName] = useState('');
+  const [currentBranch, setCurrentBranch] = useState('main');
+  const [showFileCreateDialog, setShowFileCreateDialog] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [newFileName, setNewFileName] = useState('');
+  const [commitMessage, setCommitMessage] = useState('Create ' + newFileName);
   const [alertMessage, setAlertMessage] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [forkDialogOpen, setForkDialogOpen] = useState(false);
@@ -59,7 +66,7 @@ const RepositoryPage = () => {
 
         // Fetch branches and files
         const branchesResponse = await instance.get(`/branches/repository/${response.data.id}`);
-        const filesResponse = await instance.get(`/files/repository/${response.data.id}`);
+        const filesResponse = await instance.get(`/files/${username}/${repoName}/${currentBranch}`);
         setBranches(branchesResponse.data);
         setFiles(filesResponse.data);
 
@@ -70,43 +77,67 @@ const RepositoryPage = () => {
       }
     };
     fetchRepo();
-  }, [username, repoName]);
-
-  const handleCreateBranch = async () => {
-    try {
-      const response = await instance.post('/branches', {
-        name: newBranchName,
-        repositoryId: repo.id,
-      });
-      setBranches((prev) => [...prev, response.data]);
-      setShowBranchDialog(false);
-      setNewBranchName('');
-      setAlertMessage({ type: 'success', text: 'Branch created successfully!' });
-    } catch (err) {
-      setAlertMessage({ type: 'error', text: 'Failed to create branch.' });
-    }
-  };
+  }, [username, repoName, currentBranch]);
 
   const handleDeleteBranch = async (branchId) => {
     try {
       await instance.delete(`/branches/${branchId}`);
       setBranches((prev) => prev.filter((branch) => branch.id !== branchId));
-      setAlertMessage({ type: 'success', text: 'Branch deleted successfully!' });
+      dispatch(showNotification({ type: 'success', text: 'Branch deleted successfully!' }));
     } catch (err) {
-      setAlertMessage({ type: 'error', text: 'Failed to delete branch.' });
+      dispatch(showNotification({ type: 'error', text: 'Failed to delete branch.' }));
     }
   };
 
-  const handleFileUpload = async (event) => {
+  const handleFileChange = (e) => {
+    setSelectedFile(e.target.files[0]);
+  };
+
+  const validateFileForm = () => {
+    let error = "";
+  
+    if (!newFileName) {
+      error = "File name can't be empty";
+    } else if (newFileName.length > 100) {
+      error = "File name should not exceed 100 characters";
+    } else if (!/^[a-zA-Z][a-zA-Z0-9_.]*$/.test(newFileName)) {
+      error = "File name must start with an alphabet and contain only alphanumeric characters or underscores";
+    }
+
+    if (selectedFile == null) {
+      error = "Please select a file."
+    }
+
+    return error;
+  };
+
+  const handleFileUpload = async () => {
+    const error = validateFileForm();
+    if (error !== "") {
+      dispatch(showNotification({ message: error, type: "error" }));
+      return;
+    }
+
     const formData = new FormData();
-    formData.append('file', event.target.files[0]);
-    formData.append('repositoryId', repo.id);
+    formData.append('file', selectedFile);
+    const fileDTO = {
+      'name': newFileName,
+      'repositoryName': repoName,
+      'branchName': currentBranch,
+      'commitMessage': commitMessage,
+      'path': '/',
+    }
+    formData.append('fileDTO', JSON.stringify(fileDTO));  // Serialize the fileDTO object
+
     try {
-      const response = await instance.post('/files', formData);
-      setFiles((prev) => [...prev, response.data]);
-      setAlertMessage({ type: 'success', text: 'File uploaded successfully!' });
+      await instance.post("/files", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      dispatch(showNotification({ type: 'success', text: 'File uploaded successfully!' }));
+      setShowFileCreateDialog(files)
+      window.location.reload();
     } catch (err) {
-      setAlertMessage({ type: 'error', text: 'Failed to upload file.' });
+      dispatch(showNotification({ type: 'error', text: 'Failed to upload file.' }));
     }
   };
 
@@ -114,9 +145,9 @@ const RepositoryPage = () => {
     try {
       await instance.delete(`/files/${fileId}`);
       setFiles((prev) => prev.filter((file) => file.id !== fileId));
-      setAlertMessage({ type: 'success', text: 'File deleted successfully!' });
+      dispatch(showNotification({ type: 'success', text: 'File deleted successfully!' }));
     } catch (err) {
-      setAlertMessage({ type: 'error', text: 'Failed to delete file.' });
+      dispatch(showNotification({ type: 'error', text: 'Failed to delete file.' }));
     }
   };
 
@@ -125,10 +156,10 @@ const RepositoryPage = () => {
       const response = await instance.post('/stars/toggle', { repositoryId: repo.id });
       setIsStarred(response.data === "Starred");
       setRepo(prev => ({ ...prev, starsCount: isStarred ? prev.starsCount - 1 : prev.starsCount + 1 }));
-      setAlertMessage({
+      dispatch(showNotification({
         type: 'success',
         text: isStarred ? 'Repository unstarred!' : 'Repository starred!',
-      });
+      }));
       dispatch(showNotification({ message: isStarred ? 'Repository unstarred!' : 'Repository starred!', type: "success" }));
 
     } catch (err) {
@@ -202,7 +233,6 @@ const RepositoryPage = () => {
           
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             <Typography variant="body2"><Star size={16} /> {repo.starCount} Stars</Typography>
-            <Typography variant="body2"><GitFork size={16} /> {repo.forkCount} Forks</Typography>
             <Button
               variant={isStarred ? 'contained' : 'outlined'}
               startIcon={<Star />}
@@ -211,6 +241,7 @@ const RepositoryPage = () => {
             >
               { isStarred ? 'Unstar' : 'Star'}
             </Button>
+            <Typography variant="body2"><GitFork size={16} /> {repo.forkCount} Forks</Typography>
             <Button
               variant={repo.isForked ? 'contained' : 'outlined'}
               disabled={userData?.username === username}
@@ -238,27 +269,40 @@ const RepositoryPage = () => {
         sx={{ mb: 3 }}
       >
         <Tab icon={<Code size={16} />} label="Code" iconPosition="start" />
-        <Tab icon={<GitBranch size={16} />} label="Branches" iconPosition="start" />
         <Tab icon={<Clock size={16} />} label="Commits" iconPosition="start" />
         {userData?.username === username && <Tab icon={<Settings size={16} />} label="Settings" iconPosition="start" />}
       </Tabs>
 
       {currentTab === 0 && (
         <Paper sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Button
-                variant="outlined"
-                startIcon={<GitBranch />}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+          <FormControl sx={{ minWidth: 120 }}>
+              <Select
+                value={currentBranch}
+                onChange={(event) => {setCurrentBranch(event.target.value);}}
+              >
+                {branches.map((branch) => (
+                  <MenuItem key={branch.id} value={branch.name}>{branch.name}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <IconButton
                 size="small"
               >
-                main
-              </Button>
+                <Link href={`/${username}/${repoName}/branches`}
+                style={{ textDecoration: 'none', color: 'inherit' }}>
+                <GitBranch size={24} />
+                <Typography variant="caption" sx={{ ml: 0.5 }}>
+                  {branches.length}
+                </Typography>
+                </Link>
+              </IconButton>
             </Box>
+
             {userData?.username === username &&
-            <Button variant="contained" component="label">
+            <Button variant="contained" component="label" onClick={() => {setShowFileCreateDialog(true)}}>
               Add File
-              <input hidden type="file" onChange={handleFileUpload} />
             </Button>}
           </Box>
           {files.length > 0 &&
@@ -284,7 +328,7 @@ const RepositoryPage = () => {
         </Paper>
       )}
 
-      {userData?.username === username && currentTab === 3 && (
+      {userData?.username === username && currentTab === 2 && (
         <Paper sx={{ p: 3 }}>
           <Typography variant="h6" color="error" sx={{ mb: 2 }}>
             Danger Zone
@@ -316,6 +360,36 @@ const RepositoryPage = () => {
             fullWidth
             margin="dense"
           />
+      </ConfirmationDialog>
+
+      <ConfirmationDialog
+          open={showFileCreateDialog}
+          onClose={() => setShowFileCreateDialog(false)}
+          onConfirm={handleFileUpload}
+          title="Add a new file"
+          confirmText="Add File"
+        >
+          <Box sx={{ mt: 2 }}>
+            <TextField
+              label="File name"
+              fullWidth
+              value={newFileName}
+              onChange={(e) => {setNewFileName(e.target.value ); setCommitMessage("Create " + e.target.value)}}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              label="Commit Message"
+              fullWidth
+              multiline
+              rows={3}
+              value={commitMessage}
+              onChange={(e) => setCommitMessage(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+            
+              
+              <input type="file" onChange={handleFileChange} />
+          </Box>
       </ConfirmationDialog>
     {userData?.username === username &&
       <ConfirmationDialog

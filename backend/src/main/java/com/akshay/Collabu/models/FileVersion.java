@@ -8,7 +8,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Data;
@@ -25,14 +24,14 @@ public class FileVersion {
     @JoinColumn(name = "file_id", nullable = false)
     private File file;
 
-    private int versionNumber;
+    private Integer versionNumber;
 
     @ManyToOne
     @JoinColumn(name = "commit_id", nullable = false)
     private Commit commit;
 
-    @Lob
-    private String content;
+    @Column(nullable = false)
+    private String hash; // Reference to the file content in file_contents
 
     private Long size;
 

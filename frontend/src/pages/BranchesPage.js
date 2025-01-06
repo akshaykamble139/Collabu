@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Container, Box, Typography, TextField, Button, Paper, InputAdornment } from '@mui/material';
 import { Search, GitBranch } from 'lucide-react';
@@ -104,9 +104,14 @@ const BranchesPage = () => {
           <Paper key={branch.id} sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <GitBranch size={20} />
-              <Typography variant="h6">
-                {branch.name}
-              </Typography>
+              <Link
+                to={`/${username}/${repoName}/tree/${branch.name}`}
+                style={{ textDecoration: 'none', color: 'inherit' }}
+              >
+                <Typography variant="h6">
+                  {branch.name}
+                </Typography>
+              </Link>
             </Box>
           </Paper>
         ))}
