@@ -18,8 +18,9 @@ public class FileContent {
     private String hash;
 
     @Lob
-    @Column(nullable = true) // Nullable because content might not be stored in DB
+    @Column(columnDefinition = "LONGBLOB", nullable = true) // Explicitly set LONGBLOB
     private byte[] content;
+
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

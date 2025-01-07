@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Container, Box, Typography, TextField, Button, Avatar } from "@mui/material";
-import instance from "../services/axiosConfig";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../redux/userSlice";
 import { showNotification } from "../redux/notificationSlice";
-import ConfirmationDialog from "./ConfirmationDialog";
+import apiService from "../services/apiService";
+import { hideConfirmationDialog, showConfirmationDialog } from "../redux/confirmationDialogSlice";
 
 const ProfilePage = () => {
   const { username } = useParams();
@@ -16,8 +16,6 @@ const ProfilePage = () => {
   const userData = useSelector(state => state.user);
   const dispatch = useDispatch();
   const [selectedFile, setSelectedFile] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogAction, setDialogAction] = useState(null);
 
   useEffect(() => {
     if (!username && userData.username) {
@@ -29,7 +27,7 @@ const ProfilePage = () => {
     const fetchUserProfile = async () => {
       setLoading(true);
       try {
-        const response = await instance.get("/users/profile/" + username);
+        const response = await apiService.fetchProfileDetails(username);
         setUser(response.data);
       } catch (error) {
         dispatch(showNotification({ message: "Failed to load profile.", type: "error" }));
@@ -44,7 +42,7 @@ const ProfilePage = () => {
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     try {
-      await instance.post("/users/password", { password });
+      await apiService.changePassword(password);
       dispatch(showNotification({ message: "Password updated. Please login again.", type: "success" }));
       localStorage.removeItem("token");
       localStorage.removeItem("username");
@@ -65,11 +63,7 @@ const ProfilePage = () => {
     e.preventDefault();
     if (userData?.username === username) {
       try {
-        await instance.put("/users/profile/update", {
-          bio: user.bio,
-          location: user.location,
-          website: user.website
-        });
+        await apiService.updateProfileDetails(user.bio,user.location,user.website);
         dispatch(showNotification({ message: "Profile updated successfully!", type: "success" }));
       } catch (error) {
         dispatch(showNotification({ message: "Failed to update profile.", type: "error" }));
@@ -86,9 +80,7 @@ const ProfilePage = () => {
     const formData = new FormData();
     formData.append("file", selectedFile);
     try {
-      await instance.post("/users/upload-profile-picture", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await apiService.updateProfilePicture(formData);
       dispatch(showNotification({ message: "Profile picture updated!", type: "success" }));
       window.location.reload();
     } catch (error) {
@@ -103,26 +95,43 @@ const ProfilePage = () => {
     navigate("/login");
   };
 
-  const openDialog = (action) => {
-    setDialogAction(action);
-    setDialogOpen(true);
-  };
-
-  const handleConfirmDialog = async () => {
-    setDialogOpen(false);
-    if (dialogAction === "deactivate") {
-      await instance.post("/users/deactivate");
+  const handleConfirmDialog = async (action) => {
+    dispatch(hideConfirmationDialog());
+    if (action === "deactivate") {
+      await apiService.deactivateAccount();
       dispatch(showNotification({ message: "Account deactivated.", type: "success" }));
       setTimeout(() => {
         handleLogout();
       },1500);
-    } else if (dialogAction === "delete") {
-      await instance.delete("/users");
+    } else if (action === "delete") {
+      await apiService.deleteAccount();
       dispatch(showNotification({ message: "Account deleted.", type: "success" }));
       setTimeout(() => {
         handleLogout();
       },1500);
     }
+  };
+
+  const openDialog = (action) => {
+    const title = action === "delete" ? "Delete Account" : "Deactivate Account";
+    const onConfirm = () => {
+      handleConfirmDialog(action);
+    }
+    const message = action === "delete"
+    ? "Are you sure you want to delete your account? This action is irreversible."
+    : "Are you sure you want to deactivate your account?"
+    dispatch(
+      showConfirmationDialog({
+        title: title,
+        message: (
+          <Typography>
+            {message}        
+        </Typography>
+        ),
+        confirmText: title,
+        onConfirm: onConfirm,
+      })
+    );
   };
 
   return (
@@ -197,22 +206,6 @@ const ProfilePage = () => {
             <Button variant="contained" color="error" fullWidth onClick={() => openDialog("delete")} sx={{ mt: 2 }}>Delete Account</Button>
           </Box>}
       </Box>
-
-      <ConfirmationDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        onConfirm={handleConfirmDialog}
-        title={dialogAction === "delete" ? "Delete Account" : "Deactivate Account"}
-        confirmText={dialogAction === "delete" ? "Delete Account" : "Deactivate Account"}
-      >
-        <Typography>
-          {
-            dialogAction === "delete"
-              ? "Are you sure you want to delete your account? This action is irreversible."
-              : "Are you sure you want to deactivate your account?"
-          }        
-        </Typography>
-      </ConfirmationDialog>
     </Container>
   );
 };

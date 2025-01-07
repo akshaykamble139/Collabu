@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { TextField, Button, Container, Box, Typography, CircularProgress } from "@mui/material";
-import instance from "../services/axiosConfig";
 import { showNotification } from "../redux/notificationSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import apiService from "../services/apiService";
 
 const ReactivateAccount = () => {
   const [form, setForm] = useState({ username: "", email: "", password: "" });
@@ -35,7 +35,7 @@ const ReactivateAccount = () => {
 
     try {
       // Send reactivation request with username, email, and password
-      await instance.post("/api/auth/reactivate", form);
+      await apiService.reactivateAccount(form);
       
       dispatch(showNotification({
         message: "Account reactivated successfully. You can now log in.",

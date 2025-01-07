@@ -218,6 +218,7 @@ public class RepositoryService {
     					        				|| repo.getVisibility().equalsIgnoreCase("private") && repo.getOwner().getUsername().equals(userDetails.getUsername()))
     									.map(repo -> {
     								        repo.setStarsCount(cacheService.getRepositoryStarCount(repo.getId()));
+    								        repo.setForksCount(cacheService.getRepositoryForkCount(repo.getId()));
     								        return repo;
     								    })
     									.collect(Collectors.toList());

@@ -1,36 +1,34 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { Container, Box, Typography, TextField, Button, Paper, InputAdornment } from '@mui/material';
 import { Search, GitBranch } from 'lucide-react';
-import instance from '../services/axiosConfig';
 import { showNotification } from "../redux/notificationSlice";
-import ConfirmationDialog from './ConfirmationDialog';
+import apiService from '../services/apiService';
+import CreateBranchForm from '../forms/CreateBranchForm';
+import { hideConfirmationDialog, showConfirmationDialog } from '../redux/confirmationDialogSlice';
 
 const BranchesPage = () => {
   const { username, repoName } = useParams();
   const [branches, setBranches] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [openNewBranch, setOpenNewBranch] = useState(false);
   const [newBranch, setNewBranch] = useState({ name: '', sourceBranch: 'main' });
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const userData = useSelector(state => state.user);
-
-  const fetchBranches = async () => {
-    try {
-      const response = await instance.get(`/branches/${username}/${repoName}`);
-      setBranches(response.data);
-    } catch (err) {
-        navigate('/error', { state: { code: err?.response?.code ? err.response.code : 404 } });
-    }
-  };
 
    useEffect(() => {
+      const fetchBranches = async () => {
+        try {
+          const response = await apiService.fetchBranches(username,repoName);
+          setBranches(response.data);
+        } catch (err) {
+            navigate('/error', { state: { code: err?.response?.code ? err.response.code : 404 } });
+        }
+      };
       fetchBranches();
-    }, []);
+    }, [username, repoName, navigate]);
 
-  const validateBranchForm = () => {
+  const validateBranchForm = (newBranch) => {
     let error = "";
 
     if (!newBranch.name) {
@@ -42,27 +40,54 @@ const BranchesPage = () => {
     return error;
   };
 
-  const handleCreateBranch = async () => {
+  const handleCreateBranch = async (newBranch) => {
     try {
-      const error = validateBranchForm();
+      const error = validateBranchForm(newBranch);
 
       if (error !== "") {
         dispatch(showNotification({ message: error, type: "error" }));
         return;
       }
-      const response = await instance.post(`/branches`, {
-        name: newBranch.name,
-        parentBranchName: newBranch.sourceBranch,
-        repositoryName: repoName,
-      });
+      const response = await apiService.createBranch(newBranch.name,newBranch.sourceBranch, repoName);
       setBranches([...branches, response.data]);
-      setOpenNewBranch(false);
+      dispatch(hideConfirmationDialog());
       setNewBranch({ name: '', sourceBranch: 'main' });
       dispatch(showNotification({ message: "Branch created successfully!", type: "success" }));
     } catch (err) {
       dispatch(showNotification({ message: err.response?.data?.message || 'Failed to create branch.', type: "error" }));
     }
   };
+
+  const openCreateBranchDialog = () => {
+    let newBranchName = newBranch.name;
+    let sourceBranchName = newBranch.sourceBranch;
+
+    const handleBranchNameChange = (name) => {
+      newBranchName = name
+    };
+
+    const handleSourceBranchChange = (sourceBranch) => {
+      sourceBranchName = sourceBranch;
+    };
+
+    dispatch(
+      showConfirmationDialog({
+        title: "Create a new branch",
+        message: (
+          <CreateBranchForm
+            branches={branches}
+            newBranchName={newBranchName}
+            sourceBranchName={sourceBranchName}
+            onBranchNameChange={handleBranchNameChange}
+            onSourceBranchChange={handleSourceBranchChange}
+          />
+        ),
+        confirmText: "Create branch",
+        onConfirm: () => handleCreateBranch({name: newBranchName, sourceBranch: sourceBranchName}),
+  
+      })
+    );
+  }
 
   const filteredBranches = branches.filter(branch =>
     branch.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -77,7 +102,7 @@ const BranchesPage = () => {
         <Button
           variant="contained"
           color="primary"
-          onClick={() => setOpenNewBranch(true)}
+          onClick={openCreateBranchDialog}
         >
           New Branch
         </Button>
@@ -116,31 +141,6 @@ const BranchesPage = () => {
           </Paper>
         ))}
       </Box>
-
-      <ConfirmationDialog
-        open={openNewBranch}
-        onClose={() => setOpenNewBranch(false)}
-        onConfirm={handleCreateBranch}
-        title="Create a new branch"
-        confirmText="Create branch"
-      >
-        <Box sx={{ mt: 2 }}>
-          <TextField
-            label="Branch name"
-            fullWidth
-            value={newBranch.name}
-            onChange={(e) => setNewBranch({ ...newBranch, name: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Source branch"
-            fullWidth
-            value={newBranch.sourceBranch}
-            onChange={(e) => setNewBranch({ ...newBranch, sourceBranch: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-        </Box>
-      </ConfirmationDialog>
     </Container>
   );
 };

@@ -15,44 +15,31 @@ import {
   List,
   ListItem,
   ListItemText,
-  TextField,
   FormControl,
-  InputLabel,
   MenuItem,
   Select,
 } from '@mui/material';
 import {
   Star,
   GitFork,
-  Eye,
   Code,
   GitBranch,
   Clock,
-  FileText,
   Trash,
-  Upload,
   Settings,
 } from 'lucide-react';
-import instance from '../services/axiosConfig';
 import { useDispatch, useSelector } from 'react-redux';
 import { showNotification } from '../redux/notificationSlice';
-import ConfirmationDialog from './ConfirmationDialog';
-
+import apiService from '../services/apiService';
+import { hideConfirmationDialog, showConfirmationDialog } from '../redux/confirmationDialogSlice';
+import AddFileForm from '../forms/AddFileForm';
+import ForkRepositoryForm from '../forms/ForkRepositoryForm';
 const RepositoryPage = () => {
-  const { username, repoName } = useParams();
+  const { username, repoName, branchName = 'main' } = useParams(); // Default to 'main'
   const [repo, setRepo] = useState(null);
   const [currentTab, setCurrentTab] = useState(0);
   const [branches, setBranches] = useState([]);
   const [files, setFiles] = useState([]);
-  const [currentBranch, setCurrentBranch] = useState('main');
-  const [showFileCreateDialog, setShowFileCreateDialog] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [newFileName, setNewFileName] = useState('');
-  const [commitMessage, setCommitMessage] = useState('Create ' + newFileName);
-  const [alertMessage, setAlertMessage] = useState(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [forkDialogOpen, setForkDialogOpen] = useState(false);
-  const [forkedRepoName, setForkRepoName] = useState(repoName);
   const [isStarred, setIsStarred] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -61,27 +48,26 @@ const RepositoryPage = () => {
   useEffect(() => {
     const fetchRepo = async () => {
       try {
-        const response = await instance.get(`/repositories/${username}/${repoName}`);
-        setRepo(response.data);
-
-        // Fetch branches and files
-        const branchesResponse = await instance.get(`/branches/repository/${response.data.id}`);
-        const filesResponse = await instance.get(`/files/${username}/${repoName}/${currentBranch}`);
+        const [repoResponse, branchesResponse, filesResponse, starResponse] = await Promise.all([
+          apiService.fetchRepositoryData(username,repoName),
+          apiService.fetchBranches(username,repoName),
+          apiService.fetchFilesFromBranch(username,repoName,branchName),
+          apiService.fetchStarStatus(username,repoName),
+        ]);
+        setRepo(repoResponse.data);
         setBranches(branchesResponse.data);
         setFiles(filesResponse.data);
-
-        const starResponse = await instance.post('/stars/status', { repositoryId: response.data.id });  
         setIsStarred(starResponse.data.isActive)
       } catch (err) {
         navigate('/error', { state: { code: err?.response?.code ? err.response.code : 404 } });
       }
     };
     fetchRepo();
-  }, [username, repoName, currentBranch]);
+  }, [username, repoName, branchName]);
 
   const handleDeleteBranch = async (branchId) => {
     try {
-      await instance.delete(`/branches/${branchId}`);
+      await apiService.deleteBranch(branchId);
       setBranches((prev) => prev.filter((branch) => branch.id !== branchId));
       dispatch(showNotification({ type: 'success', text: 'Branch deleted successfully!' }));
     } catch (err) {
@@ -89,52 +75,36 @@ const RepositoryPage = () => {
     }
   };
 
-  const handleFileChange = (e) => {
-    setSelectedFile(e.target.files[0]);
+  const validateFileForm = (fileName, selectedFile) => {
+    if (!fileName) return "File name can't be empty.";
+    if (fileName.length > 100) return "File name should not exceed 100 characters";
+    if (!/^[a-zA-Z][a-zA-Z0-9_.]*$/.test(fileName))
+      return "File name must start with an alphabet and contain only alphanumeric characters, underscores, or dots.";
+    if (!selectedFile) return "Please select a file.";
+    return "";
   };
 
-  const validateFileForm = () => {
-    let error = "";
-  
-    if (!newFileName) {
-      error = "File name can't be empty";
-    } else if (newFileName.length > 100) {
-      error = "File name should not exceed 100 characters";
-    } else if (!/^[a-zA-Z][a-zA-Z0-9_.]*$/.test(newFileName)) {
-      error = "File name must start with an alphabet and contain only alphanumeric characters or underscores";
-    }
-
-    if (selectedFile == null) {
-      error = "Please select a file."
-    }
-
-    return error;
-  };
-
-  const handleFileUpload = async () => {
-    const error = validateFileForm();
-    if (error !== "") {
-      dispatch(showNotification({ message: error, type: "error" }));
-      return;
-    }
-
+const handleFileUpload = async (fileName, commitMessage, file) => {
+  const error = validateFileForm(fileName, file);
+      if (error) {
+        dispatch(showNotification({ message: error, type: "error" }));
+        return;
+      }
     const formData = new FormData();
-    formData.append('file', selectedFile);
+    formData.append('file', file);
     const fileDTO = {
-      'name': newFileName,
+      'name': fileName,
       'repositoryName': repoName,
-      'branchName': currentBranch,
+      'branchName': branchName,
       'commitMessage': commitMessage,
       'path': '/',
     }
     formData.append('fileDTO', JSON.stringify(fileDTO));  // Serialize the fileDTO object
 
     try {
-      await instance.post("/files", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await apiService.uploadFile(formData);
       dispatch(showNotification({ type: 'success', text: 'File uploaded successfully!' }));
-      setShowFileCreateDialog(files)
+      dispatch(hideConfirmationDialog())
       window.location.reload();
     } catch (err) {
       dispatch(showNotification({ type: 'error', text: 'Failed to upload file.' }));
@@ -143,7 +113,7 @@ const RepositoryPage = () => {
 
   const handleDeleteFile = async (fileId) => {
     try {
-      await instance.delete(`/files/${fileId}`);
+      await apiService.deleteFile(fileId);
       setFiles((prev) => prev.filter((file) => file.id !== fileId));
       dispatch(showNotification({ type: 'success', text: 'File deleted successfully!' }));
     } catch (err) {
@@ -153,7 +123,7 @@ const RepositoryPage = () => {
 
   const handleToggleStar = async () => {
     try {
-      const response = await instance.post('/stars/toggle', { repositoryId: repo.id });
+      const response = await apiService.toggleStar(username,repoName);
       setIsStarred(response.data === "Starred");
       setRepo(prev => ({ ...prev, starsCount: isStarred ? prev.starsCount - 1 : prev.starsCount + 1 }));
       dispatch(showNotification({
@@ -167,12 +137,26 @@ const RepositoryPage = () => {
     }
   };
 
-  const handleFork = async () => {
+  const handleFork = async (forkedRepoName) => {
     try {
-      const response = await instance.post('/repositories/fork', { repositoryId: repo.id, name: forkedRepoName });
+      let error = "";
+  
+      if (!forkedRepoName) {
+        error = "Repository name can't be empty";
+      } else if (forkedRepoName.length > 100) {
+        error = "Repository name should not exceed 100 characters";
+      } else if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(forkedRepoName)) {
+        error = "Repository name must start with an alphabet and contain only alphanumeric characters or underscores";
+      }
+
+      if (error) {
+        dispatch(showNotification({ message: error, type: "error" }));
+        return;
+      }
+      await apiService.forkRepository(repo.id,forkedRepoName);
       setRepo(prev => ({ ...prev, forksCount: prev.forksCount + 1 }));
       dispatch(showNotification({ type: 'success', message: 'Repository forked successfully!' }));
-      setForkDialogOpen(false);
+      dispatch(hideConfirmationDialog())
       navigate(`/${username}/repositories`);
     } catch (err) {
       dispatch(showNotification({ type: 'error', message: err?.response?.data?.message || 'Failed to fork repository.' }));
@@ -180,19 +164,88 @@ const RepositoryPage = () => {
   };
 
   const openForkDialog = () => {
-    setForkDialogOpen(true);
+    let newName = repoName;
+
+    const handleNameChange = (name) => {
+      newName = name;
+    }
+
+    dispatch(
+      showConfirmationDialog({
+        title: "Fork Repository",
+        message: (
+          <ForkRepositoryForm
+              newRepoName={newName}
+              setNewRepoName={handleNameChange}
+            />
+        ),
+        confirmText: "Fork",
+        onConfirm: () => handleFork(newName),
+      })
+    );
   };
 
-   const openDeleteDialog = () => {
-      setDeleteDialogOpen(true);
+  const openCreateFileDialog = () => {
+    let fileName = "";
+    let commitMessage = "Create ";
+    let selectedFile = null;
+
+    const handleFileChange = (file) => {
+      selectedFile = file;
     };
+
+    const handleFileNameChange = (name) => {
+      fileName = name;
+      commitMessage = `Create ${name}`;
+    };
+
+    const handleCommitMessageChange = (message) => {
+      commitMessage = message;
+    };
+    dispatch(
+      showConfirmationDialog({
+        title: "Add a new file",
+        message: (
+          <AddFileForm
+            onFileNameChange={handleFileNameChange}
+            onCommitMessageChange={handleCommitMessageChange}
+            onFileChange={handleFileChange}
+          />
+        ),
+        confirmText: "Add File",
+        onConfirm: () => handleFileUpload(fileName, commitMessage, selectedFile),
+  
+      })
+    );
+  }
+
+  const setCurrentBranch = (event) => {
+    const newBranch = event.target.value;
+    if (newBranch !== branchName) {
+      navigate(`/${username}/${repoName}/tree/${newBranch}`);
+    }
+  }
+
+   const openDeleteDialog = () => {
+    if (userData?.username === username) {
+      dispatch(showConfirmationDialog({
+        title: "Delete Repository",
+        message: (
+        <Typography>
+          {`Are you sure you want to delete the repository "${repo?.name}"? This action cannot be undone.`}
+        </Typography>),
+        confirmText: "Delete",
+        onConfirm: handleDeleteRepo,
+      }));
+    }
+  };
   
     const handleDeleteRepo = async () => {
       if (userData?.username === username) {
         try {
-          await instance.delete(`/repositories/${repo.id}`);
+          await apiService.deleteRepository(repo.id);
           dispatch(showNotification({ message: "Repository deleted successfully.", type: "success" }));
-          setDeleteDialogOpen(false);
+          dispatch(hideConfirmationDialog());
           navigate(`/${username}/repositories`);
         } catch (err) {
           dispatch(showNotification({ message: "Failed to delete repository.", type: "error" }));
@@ -278,8 +331,8 @@ const RepositoryPage = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
           <FormControl sx={{ minWidth: 120 }}>
               <Select
-                value={currentBranch}
-                onChange={(event) => {setCurrentBranch(event.target.value);}}
+                value={branchName}
+                onChange={setCurrentBranch}
               >
                 {branches.map((branch) => (
                   <MenuItem key={branch.id} value={branch.name}>{branch.name}</MenuItem>
@@ -301,7 +354,7 @@ const RepositoryPage = () => {
             </Box>
 
             {userData?.username === username &&
-            <Button variant="contained" component="label" onClick={() => {setShowFileCreateDialog(true)}}>
+            <Button variant="contained" component="label" onClick={openCreateFileDialog}>
               Add File
             </Button>}
           </Box>
@@ -346,63 +399,6 @@ const RepositoryPage = () => {
           </Box>
         </Paper>
       )}
-      <ConfirmationDialog
-          open={forkDialogOpen}
-          onClose={() => setForkDialogOpen(false)}
-          onConfirm={handleFork}
-          title="Fork Repository"
-          confirmText="Fork"
-        >
-          <TextField
-            label="Repository Name"
-            value={repoName}
-            onChange={(e) => setForkRepoName(e.target.value)}
-            fullWidth
-            margin="dense"
-          />
-      </ConfirmationDialog>
-
-      <ConfirmationDialog
-          open={showFileCreateDialog}
-          onClose={() => setShowFileCreateDialog(false)}
-          onConfirm={handleFileUpload}
-          title="Add a new file"
-          confirmText="Add File"
-        >
-          <Box sx={{ mt: 2 }}>
-            <TextField
-              label="File name"
-              fullWidth
-              value={newFileName}
-              onChange={(e) => {setNewFileName(e.target.value ); setCommitMessage("Create " + e.target.value)}}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              label="Commit Message"
-              fullWidth
-              multiline
-              rows={3}
-              value={commitMessage}
-              onChange={(e) => setCommitMessage(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            
-              
-              <input type="file" onChange={handleFileChange} />
-          </Box>
-      </ConfirmationDialog>
-    {userData?.username === username &&
-      <ConfirmationDialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-        onConfirm={handleDeleteRepo}
-        title="Delete Repository"
-        confirmText="Delete"
-      >
-        <Typography>
-          {`Are you sure you want to delete the repository "${repo?.name}"? This action cannot be undone.`}
-        </Typography>
-      </ConfirmationDialog>}
     </Container>
   );
 };

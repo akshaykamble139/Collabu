@@ -7,23 +7,21 @@ import {
   Box,
   Button,
   TextField,
-  FormControlLabel,
-  Switch,
   Paper,
   Grid2,
   InputAdornment,
   Chip,
 } from '@mui/material';
 import { Search, Star, GitFork, Code } from 'lucide-react';
-import instance from '../services/axiosConfig';
 import { showNotification } from '../redux/notificationSlice';
-import ConfirmationDialog from './ConfirmationDialog';
+import apiService from '../services/apiService';
+import { hideConfirmationDialog, showConfirmationDialog } from '../redux/confirmationDialogSlice';
+import CreateRepositoryForm from '../forms/CreateRepositoryForm';
 
 const RepositoriesPage = () => {
   const { username } = useParams();
   const [repos, setRepos] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [openNewRepo, setOpenNewRepo] = useState(false);
   const [newRepo, setNewRepo] = useState({ name: '', description: '', publicRepositoryOrNot: true });
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -31,7 +29,7 @@ const RepositoriesPage = () => {
 
   const fetchRepos = async (userName) => {
     try {
-      const response = await instance.get(`/repositories/user/${userName}`);
+      const response = await apiService.fetchAllRepositories(userName);
       setRepos(response.data);
     } catch (err) {
       dispatch(showNotification({ message: "Failed to fetch repositories.", type: "error" }));
@@ -46,9 +44,9 @@ const RepositoriesPage = () => {
     if (userName) {
       fetchRepos(userName);
     }
-  }, [username]);
+  }, [username, userData]);
 
-  const validateRepositoryForm = () => {
+  const validateRepositoryForm = (newRepo) => {
     let error = "";
   
     if (!newRepo.name) {
@@ -62,23 +60,43 @@ const RepositoriesPage = () => {
     return error;
   };
 
-  const handleCreateRepo = async () => {
+  const openCreateRepositoryDialog = () => {
+    let currentNewRepo = newRepo;
+
+    const handleCurrentNewRepoChange = (repo) => {
+      currentNewRepo = repo;
+    }
+    if (userData?.username === username){
+      dispatch(
+        showConfirmationDialog({
+          title: "Create a new repository",
+          message: (
+            <CreateRepositoryForm
+              newRepo={currentNewRepo}
+              setNewRepo={handleCurrentNewRepoChange}
+            />
+          ),
+          confirmText: "Create repository",
+          onConfirm: ()  => handleCreateRepo(currentNewRepo),
+        })
+      );
+    }
+  }
+
+  const handleCreateRepo = async (newRepo) => {
     if (userData?.username === username) {
       try {
-        const error = validateRepositoryForm();
+        const error = validateRepositoryForm(newRepo);
 
         if (error !== "") {
           dispatch(showNotification({ message: error, type: "error" }));
           return;
         }
-        const response = await instance.post('/repositories', {
-          name: newRepo.name,
-          description: newRepo.description,
-          ownerUsername: userData.username,
-          publicRepositoryOrNot: newRepo.publicRepositoryOrNot,
-        });
+        const response = await apiService.createRepository(
+          newRepo.name, newRepo.description, userData.username, newRepo.publicRepositoryOrNot,
+        );
         setRepos([...repos, response.data]);
-        setOpenNewRepo(false);
+        dispatch(hideConfirmationDialog())
         setNewRepo({ name: '', description: '', publicRepositoryOrNot: true });
         dispatch(showNotification({ message: "Repository created successfully!", type: "success" }));
         navigate(`/${userData.username}/${response.data.name}`);
@@ -102,7 +120,7 @@ const RepositoriesPage = () => {
           <Button
             variant="contained"
             color="primary"
-            onClick={() => setOpenNewRepo(true)}
+            onClick={openCreateRepositoryDialog}
           >
             New Repository
           </Button>
@@ -174,43 +192,6 @@ const RepositoriesPage = () => {
           </Paper>
         ))}
       </Box>
-
-      {userData?.username === username &&
-      <ConfirmationDialog
-        open={openNewRepo}
-        onClose={() => setOpenNewRepo(false)}
-        onConfirm={handleCreateRepo}
-        title="Create a new repository"
-        confirmText="Create repository"
-      >
-        <Box sx={{ mt: 2 }}>
-            <TextField
-              label="Repository name"
-              fullWidth
-              value={newRepo.name}
-              onChange={(e) => setNewRepo({ ...newRepo, name: e.target.value })}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              label="Description (optional)"
-              fullWidth
-              multiline
-              rows={3}
-              value={newRepo.description}
-              onChange={(e) => setNewRepo({ ...newRepo, description: e.target.value })}
-              sx={{ mb: 2 }}
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={newRepo.publicRepositoryOrNot}
-                  onChange={(e) => setNewRepo({ ...newRepo, publicRepositoryOrNot: e.target.checked })}
-                />
-              }
-              label={newRepo.publicRepositoryOrNot ? 'Public' : 'Private'}
-            />
-          </Box>
-      </ConfirmationDialog>}
     </Container>
   );
 };

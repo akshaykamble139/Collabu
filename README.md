@@ -76,10 +76,12 @@ The Code Collaboration Platform is a portfolio project designed to simulate a Gi
 
 ---
 
-#### **Current Version:** v0.21
+#### **Current Version:** v0.22
+Code refactored in front end. New files created to clean up the components so that only relevant parts remain. A new service created to handle all api calls from one place. New reducer created in redux store for handling the global component for dialog.
 
-BranchPage and api endpoint to get list of files for given branch in repository created. DB table structure changed so that storing and comparing files is similar in functionality to that of github. Now using hash of file contents to avoid storing redundant data even if the version if different.
+#### v0.21
 
+BranchPage and api endpoint to get list of files for given branch in repository created. Also api for creating files is integrated in frontend to upload files to given branch of a repository. DB table structure changed so that storing and comparing files is similar in functionality to that of github. Now using hash of file contents to avoid storing redundant data even if the version if different.
 
 #### v0.20
 

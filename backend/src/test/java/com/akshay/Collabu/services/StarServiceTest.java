@@ -113,7 +113,7 @@ class StarServiceTest {
         star.setUser(user);
         star.setRepository(repo);
         
-        StarDTO starDTO = new StarDTO(star.getId(), star.getRepository().getId(), star.getIsActive());
+        StarDTO starDTO = starService.mapEntityToDTO(star);
 
         when(repositoryRepository.findById(anyLong())).thenReturn(Optional.of(repo));
        
@@ -183,7 +183,7 @@ class StarServiceTest {
         star.setUser(user);
         star.setRepository(repo);
         
-        StarDTO starDTO = new StarDTO(star.getId(), star.getRepository().getId(), star.getIsActive());
+        StarDTO starDTO = starService.mapEntityToDTO(star);
        
     	when(cacheService.getUserId(anyString())).thenReturn(12345L);
 

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TextField, Button, Typography, Container, Box, CircularProgress } from "@mui/material";
-import instance from "../services/axiosConfig";
 import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "../redux/userSlice";
 import { showNotification } from "../redux/notificationSlice";  // Import notification action
+import apiService from "../services/apiService";
 
 const LoginPage = () => {
   const [form, setForm] = useState({ username: "", password: "" });
@@ -45,7 +45,7 @@ const LoginPage = () => {
 
     setTimeout(async () => {
     try {
-      const response = await instance.post("/api/auth/login", form);
+      const response = await apiService.login(form);
       const token = response.data;
 
       localStorage.setItem("token", token);  

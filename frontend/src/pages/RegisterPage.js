@@ -2,9 +2,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TextField, Button, Typography, Container, Box, CircularProgress } from "@mui/material";
-import instance from "../services/axiosConfig";
 import { useDispatch, useSelector } from "react-redux";
 import { showNotification } from "../redux/notificationSlice";
+import apiService from "../services/apiService";
 
 const RegisterPage = () => {
   const [form, setForm] = useState({ username: "", email: "", password: "" });
@@ -74,8 +74,7 @@ const RegisterPage = () => {
     setTimeout(async () => {
 
     try {
-      await instance.post("/api/auth/register", form);
-      
+      await apiService.register(form);
       dispatch(showNotification({
         message: "Registration successful! Redirecting to login...",
         type: "success",

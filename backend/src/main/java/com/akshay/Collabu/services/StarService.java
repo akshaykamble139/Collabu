@@ -3,9 +3,13 @@ package com.akshay.Collabu.services;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import com.akshay.Collabu.dto.BranchDTO;
 import com.akshay.Collabu.dto.StarDTO;
+import com.akshay.Collabu.models.Branch;
 import com.akshay.Collabu.models.Repository_;
 import com.akshay.Collabu.models.Star;
 import com.akshay.Collabu.models.User;
@@ -34,13 +38,28 @@ public class StarService {
         return stars.size();
     }
     
+    public StarDTO mapEntityToDTO(Star star) {
+		StarDTO resultDto = new StarDTO();
+		if (star == null) {
+			resultDto.setIsActive(false);
+		}
+		else {
+			resultDto.setId(star.getId()); 
+	        resultDto.setIsActive(star.getIsActive());
+		}
+        return resultDto;
+	}
+    
     @Transactional
     public StarDTO toggleStar(String username, StarDTO starDTO) {
     	Long userId = cacheService.getUserId(username);
     	if (userId == null) {
             throw new RuntimeException("User id doesn't exist for this username");    		
     	}
-    	Long repositoryId = starDTO.getRepositoryId();
+    	Long repositoryId = cacheService.getRepositoryId(starDTO.getOwnerUsername() + "-" + starDTO.getRepositoryName());
+    	if (repositoryId == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Repository not found");
+    	}
         Star star = starRepository.findByUserIdAndRepositoryId(userId, repositoryId).orElse(null);
 
         if (star == null) {
@@ -52,7 +71,7 @@ public class StarService {
             
             star.setUser(user);
 
-            Repository_ repo = repositoryRepository.findById(starDTO.getRepositoryId())
+            Repository_ repo = repositoryRepository.findById(repositoryId)
                     .orElseThrow(() -> new RuntimeException("Repository not found"));
             
             star.setRepository(repo);
@@ -72,7 +91,7 @@ public class StarService {
      // Persist updated count to repository
         repositoryRepository.updateStarsCount(repositoryId, updatedStarCount);
         
-        return new StarDTO(savedStar.getId(), savedStar.getRepository().getId(), savedStar.getIsActive());
+        return mapEntityToDTO(savedStar);
     }
     
     public StarDTO getStarStatus(String username, StarDTO starDTO) {
@@ -80,12 +99,21 @@ public class StarService {
     	if (userId == null) {
             throw new RuntimeException("User id doesn't exist for this username");    		
     	}
-    	Long repositoryId = starDTO.getRepositoryId();
+    	
+    	Long repositoryId = cacheService.getRepositoryId(starDTO.getOwnerUsername() + "-" + starDTO.getRepositoryName());
+    	if (repositoryId == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Repository not found");
+    	}
+    	
+//    	Repository_ repo = repositoryRepository.findById(repositoryId)
+//                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Repository not found"));
+//		
+//		if (!starDTO.getOwnerUsername().equals(username) && !repo.getVisibility().equals("public")) {
+//			throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Repository not found");
+//		}
         Star savedStar = starRepository.findByUserIdAndRepositoryId(userId, repositoryId).orElse(null);
-        if (savedStar == null) {
-            return new StarDTO(null, repositoryId, false);
-        }
-        return new StarDTO(savedStar.getId(), savedStar.getRepository().getId(), savedStar.getIsActive());
+        
+        return mapEntityToDTO(savedStar);
     }
 
     public void deleteStar(Long id) {
