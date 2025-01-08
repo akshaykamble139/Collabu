@@ -1,16 +1,19 @@
 package com.akshay.Collabu.dto;
 
+import java.io.Serializable;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-public class RepositoryDTO {
-    private Long id;
+public class RepositoryDTO implements Serializable {
+    private static final long serialVersionUID = 2745070311177804504L;
+
+	private Long id;
     
     @NotBlank(message = "Repository name can't be empty")
     @Size(max = 100, message = "Repository name should not exceed 100 characters")

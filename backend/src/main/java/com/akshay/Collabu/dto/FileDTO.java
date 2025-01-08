@@ -1,5 +1,7 @@
 package com.akshay.Collabu.dto;
 
+import java.io.Serializable;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -8,8 +10,10 @@ import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-public class FileDTO {
-    private Long id;
+public class FileDTO implements Serializable{
+    private static final long serialVersionUID = 2871096297612795781L;
+
+	private Long id;
     
     @NotBlank(message = "File name can't be empty")
     @Size(max = 100, message = "File name should not exceed 100 characters")

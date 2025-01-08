@@ -14,6 +14,7 @@ import com.akshay.Collabu.models.Repository_;
 @Repository
 public interface RepositoryRepository extends JpaRepository<Repository_, Long> {
     List<Repository_> findByOwnerId(Long userId);
+    List<Repository_> findByOwnerIdAndVisibility(Long userId, String visibility);
     List<Repository_> findByVisibility(String visibility); // Public or Private repositories
     boolean existsByNameAndOwnerId(String name, Long ownerId);
 	Optional<Repository_> findByNameAndOwnerId(String repoName, Long ownerId);

@@ -7,6 +7,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.akshay.Collabu.models.Branch;
+import com.akshay.Collabu.models.Repository_;
+import com.akshay.Collabu.repositories.BranchRepository;
 import com.akshay.Collabu.repositories.RepositoryRepository;
 import com.akshay.Collabu.repositories.StarRepository;
 import com.akshay.Collabu.repositories.UserRepository;
@@ -26,9 +29,16 @@ public class CacheService {
     // Cache for fork count of repository
     private final Map<Long, Long> repositoryForkCache = new ConcurrentHashMap<>();
 
+    // Cache for visibility of repository
+    private final Map<Long, Boolean> repositoryVisibilityCache = new ConcurrentHashMap<>();
+
  // Cache for repositoryId ↔ username-repositoryName
     private final Map<Long, String> repositoryIdToNameCache = new ConcurrentHashMap<>();
     private final Map<String, Long> nameToRepositoryIdCache = new ConcurrentHashMap<>();
+
+    // Cache for branchId ↔ username-repoName-branchName
+    private final Map<Long, String> branchIdToKeyCache = new ConcurrentHashMap<>();
+    private final Map<String, Long> keyToBranchIdCache = new ConcurrentHashMap<>();
 
     @Autowired
     private UserRepository userRepository;
@@ -38,6 +48,9 @@ public class CacheService {
 
     @Autowired
     private RepositoryRepository repositoryRepository;
+    
+    @Autowired
+    private BranchRepository branchRepository;
 
     // Load cache at startup
     @PostConstruct
@@ -52,6 +65,14 @@ public class CacheService {
             repositoryIdToNameCache.put(repo.getId(), key);
             nameToRepositoryIdCache.put(key, repo.getId());
             repositoryStarCache.put(repo.getId(), starRepository.countByRepositoryIdAndIsActiveTrue(repo.getId()));
+            repositoryVisibilityCache.put(repo.getId(), repo.getVisibility().equals("public"));
+        });
+        
+        branchRepository.findAll().stream().filter(brnh -> !brnh.getIsDeleted()).forEach(branch -> {
+            String key = branch.getRepository().getOwner().getUsername() + "-" + 
+                         branch.getRepository().getName() + "-" + branch.getName();
+            branchIdToKeyCache.put(branch.getId(), key);
+            keyToBranchIdCache.put(key, branch.getId());
         });
         
         List<Object[]> forkCounts = repositoryRepository.countForksForAllRepositories();
@@ -135,6 +156,24 @@ public class CacheService {
         return forkCount;
     }
 
+    public void updateRepositoryVisibility(Long repositoryId, Boolean visibility) {
+        repositoryVisibilityCache.put(repositoryId, visibility);
+    }
+
+    public Boolean getRepositoryVisibility(Long repositoryId) {
+        if (repositoryVisibilityCache.containsKey(repositoryId)) {
+            return repositoryVisibilityCache.get(repositoryId);
+        }
+        return fetchAndCacheRepositoryVisibility(repositoryId);
+    }
+
+    private Boolean fetchAndCacheRepositoryVisibility(Long repositoryId) {
+    	Repository_ repo = repositoryRepository.getReferenceById(repositoryId);
+    	Boolean visibility = repo.getVisibility().equals("public");
+        repositoryVisibilityCache.put(repositoryId, visibility);
+        return visibility;
+    }
+
  // Get username-repoName by repositoryId
     public String getRepositoryKey(Long repositoryId) {
         if (repositoryIdToNameCache.containsKey(repositoryId)) {
@@ -192,6 +231,70 @@ public class CacheService {
         }
     }
 
+ // Get username-repoName-branchName by branchId
+    public String getBranchKey(Long branchId) {
+        if (branchIdToKeyCache.containsKey(branchId)) {
+            return branchIdToKeyCache.get(branchId);
+        }
+        return fetchAndCacheBranchKey(branchId);
+    }
+
+    // Get branchId by username-repoName-branchName
+    public Long getBranchId(String branchKey) {
+        if (keyToBranchIdCache.containsKey(branchKey)) {
+            return keyToBranchIdCache.get(branchKey);
+        }
+        return fetchAndCacheBranchId(branchKey);
+    }
+
+    // Fetch from DB if not in cache (branchId → key)
+    private String fetchAndCacheBranchKey(Long branchId) {
+        return branchRepository.findById(branchId)
+                .map(branch -> {
+                    Repository_ repo = branch.getRepository();
+                    String key = repo.getOwner().getUsername() + "-" + repo.getName() + "-" + branch.getName();
+                    branchIdToKeyCache.put(branchId, key);
+                    keyToBranchIdCache.put(key, branchId);
+                    return key;
+                })
+                .orElse(null);
+    }
+
+    // Fetch from DB if not in cache (key → branchId)
+    private Long fetchAndCacheBranchId(String branchKey) {
+        String[] parts = branchKey.split("-");
+        if (parts.length != 3) return null;
+        String username = parts[0];
+        String repoName = parts[1];
+        String branchName = parts[2];
+        
+        return repositoryRepository.findByOwnerUsernameAndName(username, repoName)
+                .map(repo -> {
+                	Branch branch = repo.getBranches().stream().filter(brnh -> brnh.getName().equals(branchName)).findFirst().orElse(null);
+                	if (branch == null) {
+                		return null;
+                	}
+                	
+                    branchIdToKeyCache.put(branch.getId(), branchKey);
+                    keyToBranchIdCache.put(branchKey, branch.getId());
+                    return branch.getId();
+                })
+                .orElse(null);
+    }
+
+    public void updateBranchKey(Long branchId, String username, String repositoryName, String branchName) {
+        String key = username + "-" + repositoryName + "-" + branchName;
+        branchIdToKeyCache.put(branchId, key);
+        keyToBranchIdCache.put(key, branchId);
+    }
+
+    public void removeBranchFromCache(Long branchId) {
+        String key = branchIdToKeyCache.remove(branchId);
+        if (key != null) {
+            keyToBranchIdCache.remove(key);
+        }
+    }
+
     // Clear cache manually (for admin actions)
     public void clearCache() {
         userIdToUsernameCache.clear();
@@ -199,6 +302,9 @@ public class CacheService {
         repositoryIdToNameCache.clear();
         nameToRepositoryIdCache.clear();
         repositoryStarCache.clear();
+        repositoryVisibilityCache.clear();
+        branchIdToKeyCache.clear();
+        keyToBranchIdCache.clear();
         loadCache();
     }
 }

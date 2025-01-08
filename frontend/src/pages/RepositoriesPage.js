@@ -26,6 +26,7 @@ const RepositoriesPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const userData = useSelector(state => state.user);
+  const [loading, setLoading] = useState(false);  // Track loading state
 
   const fetchRepos = async (userName) => {
     try {
@@ -37,14 +38,19 @@ const RepositoriesPage = () => {
   };
 
   useEffect(() => {
-    let userName = username;
-    if (!userName && userData?.username) {
-      userName = userData.username;
+    // Fetch repositories only if not already loading or fetched
+    if (!username && userData?.username && !loading) {
+      setLoading(true);  // Set loading to true before fetch
+      fetchRepos(userData.username).finally(() => {
+        setLoading(false);  // Reset loading after fetch
+      });
+    } else if (username && !loading) {
+      setLoading(true);
+      fetchRepos(username).finally(() => {
+        setLoading(false);
+      });
     }
-    if (userName) {
-      fetchRepos(userName);
-    }
-  }, [username, userData]);
+  }, [username, userData?.username]);
 
   const validateRepositoryForm = (newRepo) => {
     let error = "";

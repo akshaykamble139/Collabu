@@ -178,7 +178,7 @@ public class UserService {
 	public void deleteUserByUsername(String username) {
     	Long userId = cacheService.getUserId(username);
     	if (userId == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User id doesn't exist for this username");    		
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User doesn't exist");    		
     	}
     	deleteUser(userId);
 	}

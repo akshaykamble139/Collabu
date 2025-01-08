@@ -1,12 +1,7 @@
 package com.akshay.Collabu.services;
 
-import java.io.IOException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -23,21 +18,13 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.akshay.Collabu.dto.FileDTO;
 import com.akshay.Collabu.models.Branch;
-import com.akshay.Collabu.models.Commit;
 import com.akshay.Collabu.models.File;
-import com.akshay.Collabu.models.FileContent;
-import com.akshay.Collabu.models.FileContentLocation;
 import com.akshay.Collabu.models.FileVersion;
 import com.akshay.Collabu.models.Repository_;
-import com.akshay.Collabu.models.User;
-import com.akshay.Collabu.repositories.CommitRepository;
 import com.akshay.Collabu.repositories.FileContentsRepository;
 import com.akshay.Collabu.repositories.FileRepository;
 import com.akshay.Collabu.repositories.FileVersionRepository;
 import com.akshay.Collabu.repositories.RepositoryRepository;
-import com.akshay.Collabu.repositories.UserRepository;
-
-import jakarta.transaction.Transactional;
 
 @Service
 public class FileService {
@@ -57,13 +44,10 @@ public class FileService {
     private FileContentsRepository fileContentsRepository;
     
     @Autowired
-    private UserRepository userRepository;
-    
-    @Autowired
-    private CommitRepository commitRepository;
-    
-    @Autowired
     private CacheService cacheService;
+    
+    @Autowired
+    private FileCacheService fileCacheService;
     
     @Autowired
     private Environment environment;
@@ -80,15 +64,8 @@ public class FileService {
     }
     
     public FileDTO mapEntityToDTO(File file) {
-		FileDTO resultDto = new FileDTO();
-		resultDto.setId(file.getId());
-        resultDto.setName(file.getName());
-        resultDto.setRepositoryName(file.getRepository().getName());
-        resultDto.setPath(file.getPath());
-        resultDto.setType(file.getType());
-        resultDto.setMimeType(file.getMimeType());
-        
-        return resultDto;
+    	
+    	return fileCacheService.mapEntityToDTO(file);
 	}
     
     public FileDTO getFileById(Long id) {
@@ -97,138 +74,25 @@ public class FileService {
         return mapEntityToDTO(file);
     }
 
-    @Transactional
     public void createFile(FileDTO fileDTO, MultipartFile fileContents, UserDetails userDetails) {
         if (fileContents == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File not found");
         }
 
-        User user = userRepository.getReferenceById(cacheService.getUserId(userDetails.getUsername()));
         Long repositoryId = cacheService.getRepositoryId(userDetails.getUsername() + "-" + fileDTO.getRepositoryName());
 
         if (repositoryId == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Repository not found");
         }
+        
+        Long branchId = cacheService.getBranchId(userDetails.getUsername() + "-" + fileDTO.getRepositoryName() + "-" + fileDTO.getBranchName());
 
-        Repository_ repository = repositoryRepository.findById(repositoryId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Repository not found"));
-
-        Branch branch = repository.getBranches().stream()
-                .filter(brnch -> brnch.getName().equals(fileDTO.getBranchName()))
-                .findFirst()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found"));
-
-        boolean fileExists = fileRepository.existsByNameAndPathAndBranchId(
-                fileDTO.getName(), fileDTO.getPath(), branch.getId()
-        );
-        if (fileExists) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "File already exists in this path.");
+        if (branchId == null) {
+        	throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found");
         }
-
-        try {
-            String hash = computeSHA1Hash(fileContents);
-
-            Optional<FileContent> existingContent = fileContentsRepository.findByHash(hash);
-            FileContent fileContent;
-
-            if (existingContent.isEmpty()) {
-                FileContentLocation location = determineStorageLocation(fileContents);
-                fileContent = new FileContent();
-
-                fileContent.setHash(hash);
-                fileContent.setLocation(location);
-
-                if (location == FileContentLocation.S3) {
-                    handleS3Upload(fileContents, hash, fileContent);
-                } else {
-                    byte[] contentBytes = fileContents.getBytes();
-                    fileContent.setContent(contentBytes);
-                }
-
-                fileContent = fileContentsRepository.save(fileContent);
-            } else {
-                fileContent = existingContent.get();
-            }
-
-            File file = new File();
-            file.setName(fileDTO.getName());
-            file.setPath(fileDTO.getPath());
-            file.setRepository(repository);
-            file.setBranch(branch);
-            file.setLastModifiedAt(LocalDateTime.now());
-
-            setFileMetadata(file, fileContents, fileContent);
-            File savedFile = fileRepository.save(file);
-
-            Commit savedCommit = saveCommit(fileDTO, user, branch, repository, savedFile);
-            saveFileVersion(savedFile, hash, savedCommit, fileContents.getSize());
-
-        } catch (IOException | NoSuchAlgorithmException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to process file");
-        } 
+        
+        fileCacheService.createFileForBranchId(fileDTO, fileContents, branchId);
     }
-
-    // Determines if the file should go to S3 or DB
-    private FileContentLocation determineStorageLocation(MultipartFile file) throws IOException {
-        String mimeType = file.getContentType();
-        boolean isBinary = mimeType != null && (
-                mimeType.startsWith("image/") ||
-                mimeType.startsWith("application/") ||
-                mimeType.startsWith("video/") ||
-                mimeType.startsWith("audio/")
-        );
-        return (file.getSize() > SIZE_CUTOFF || isBinary) ? FileContentLocation.S3 : FileContentLocation.DB;
-    }
-
-    // Handles S3 upload logic
-    private void handleS3Upload(MultipartFile file, String hash, FileContent fileContent) throws IOException {
-        String bucketName = environment.getProperty("aws.s3.bucket.name", "default-bucket");
-
-        java.io.File tempFile = java.io.File.createTempFile("temp", file.getOriginalFilename());
-        file.transferTo(tempFile);
-
-        String s3Key = "files/" + hash;
-        s3Service.uploadFile(bucketName, s3Key, tempFile.toPath());
-
-        fileContent.setStorageUrl(s3Key);
-    }
-
-    // Extracts and sets metadata for the file
-    private void setFileMetadata(File file, MultipartFile fileContents, FileContent fileContent) {
-        String filename = fileContents.getOriginalFilename();
-        if (filename != null && filename.contains(".")) {
-            String extension = filename.substring(filename.lastIndexOf(".") + 1);
-            file.setType(extension);
-        }
-        file.setMimeType(fileContents.getContentType());
-        if (fileContent.getStorageUrl() != null) {
-            file.setStorageUrl(fileContent.getStorageUrl());
-        }
-    }
-
-    // Saves commit information
-    private Commit saveCommit(FileDTO fileDTO, User user, Branch branch, Repository_ repository, File savedFile) {
-        Commit commit = new Commit();
-        commit.setBranch(branch);
-        commit.setRepository(repository);
-        commit.setTimestamp(savedFile.getLastModifiedAt());
-        commit.setMessage(fileDTO.getCommitMessage() == null ? "File upload" : fileDTO.getCommitMessage());
-        commit.setUser(user);
-        return commitRepository.save(commit);
-    }
-
-    // Saves file version after the commit
-    private void saveFileVersion(File file, String hash, Commit commit, long size) {
-        FileVersion fileVersion = new FileVersion();
-        fileVersion.setFile(file);
-        fileVersion.setHash(hash);
-        fileVersion.setCreatedAt(file.getLastModifiedAt());
-        fileVersion.setVersionNumber(1);
-        fileVersion.setSize(size);
-        fileVersion.setCommit(commit);
-        fileVersionRepository.save(fileVersion);
-    }
-
     
     public void deleteFile(Long id) {
         if (!fileRepository.existsById(id)) {
@@ -250,33 +114,27 @@ public class FileService {
 			UserDetails userDetails) {
 		Long userId = cacheService.getUserId(username);
 		if (userId == null) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND,"User id not found for given username");
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND,"User not found");
 		}
 		
 		Long repositoryId = cacheService.getRepositoryId(username + "-" + repoName);
 		if (repositoryId == null) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Repository id not found for given repository name");
-		}
-		
-		Repository_ repo = repositoryRepository.findById(repositoryId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Repository not found"));
-		
-		if (!username.equals(userDetails.getUsername()) && !repo.getVisibility().equals("public")) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Repository not found");
 		}
-		Branch branch = repo.getBranches().stream()
-						.filter(brnch -> brnch.getName().equals(branchName))
-						.findFirst()
-						.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Branch not found"));
 		
-		return fileRepository.findByBranchId(branch.getId()).stream().map(file -> mapEntityToDTO(file)).collect(Collectors.toList());
+		Boolean isPublic = cacheService.getRepositoryVisibility(repositoryId);
+    	
+    	if (!username.equals(userDetails.getUsername()) && !isPublic) {
+    		throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Repository not found");
+    	}
+    	
+    	Long branchId = cacheService.getBranchId(username + "-" + repoName + "-" + branchName);
+		if (branchId == null) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Branch not found");
+		}
+		
+		return fileCacheService.getFilesByBranchId(branchId);
 	}
-	
-	public String computeSHA1Hash(MultipartFile file) throws IOException, NoSuchAlgorithmException {
-        MessageDigest digest = MessageDigest.getInstance("SHA-1");
-        byte[] hashBytes = digest.digest(file.getBytes());
-        return Base64.getEncoder().encodeToString(hashBytes);
-    }
 	
 	public List<FileDTO> getFilesByPath(String username, String repoName, String branchName, String path, UserDetails userDetails) {
         Long repositoryId = cacheService.getRepositoryId(username + "-" + repoName);

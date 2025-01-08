@@ -76,7 +76,11 @@ The Code Collaboration Platform is a portfolio project designed to simulate a Gi
 
 ---
 
-#### **Current Version:** v0.23
+#### **Current Version:** v0.24
+
+Redis added to store frequently fetched data like repository list, branches list, files list. New files created for repository, branch and file services to handle caching and evicting. Also new local cache created for branch id and (username+repositoryName+branchName) key mapping. And one for visibility of repository id to reduce db queries. 
+
+#### v0.23
 
 File service classes updated to handle creating files of all types, text based and binary files. Small text based files will be saved in db whereas large text based files as well as binary files will be stored in aws s3 bucket. New endpoint created to retrieve files and display their contents on new FileViewerPage in case of small text-based file or image, otherwise a download button is displayed for user to download the file.
 
