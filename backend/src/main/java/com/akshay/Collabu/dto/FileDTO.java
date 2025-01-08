@@ -33,4 +33,8 @@ public class FileDTO {
     private String branchName;
     
     private String commitMessage;
+    
+    private boolean isBinary;
+    private String mimeType;
+
 }

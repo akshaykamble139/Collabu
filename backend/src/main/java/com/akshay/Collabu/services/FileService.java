@@ -13,7 +13,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -84,10 +86,8 @@ public class FileService {
         resultDto.setRepositoryName(file.getRepository().getName());
         resultDto.setPath(file.getPath());
         resultDto.setType(file.getType());
+        resultDto.setMimeType(file.getMimeType());
         
-        if (file.getSize() > SIZE_CUTOFF && file.getStorageUrl() != null) {
-        	
-        }       
         return resultDto;
 	}
     
@@ -99,120 +99,137 @@ public class FileService {
 
     @Transactional
     public void createFile(FileDTO fileDTO, MultipartFile fileContents, UserDetails userDetails) {
-    	
-    	if (fileContents == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"File not found"); 
-    	}
-    	
-    	User user = userRepository.getReferenceById(cacheService.getUserId(userDetails.getUsername()));
-    	
-    	Long repositoryId = cacheService.getRepositoryId(userDetails.getUsername() + "-" + fileDTO.getRepositoryName());
-    	if (repositoryId == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Repository not found");
-    	}
-        // Validate repository existence
+        if (fileContents == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File not found");
+        }
+
+        User user = userRepository.getReferenceById(cacheService.getUserId(userDetails.getUsername()));
+        Long repositoryId = cacheService.getRepositoryId(userDetails.getUsername() + "-" + fileDTO.getRepositoryName());
+
+        if (repositoryId == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Repository not found");
+        }
+
         Repository_ repository = repositoryRepository.findById(repositoryId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Repository not found"));
-        
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Repository not found"));
+
         Branch branch = repository.getBranches().stream()
-				.filter(brnch -> brnch.getName().equals(fileDTO.getBranchName()))
-				.findFirst()
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Branch not found"));
-        
-        // Check for file name uniqueness within the same path in the repository
+                .filter(brnch -> brnch.getName().equals(fileDTO.getBranchName()))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found"));
+
         boolean fileExists = fileRepository.existsByNameAndPathAndBranchId(
-            fileDTO.getName(), fileDTO.getPath(), branch.getId()
+                fileDTO.getName(), fileDTO.getPath(), branch.getId()
         );
         if (fileExists) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,"File with this name already exists in the specified path in this branch.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "File already exists in this path.");
         }
-        
+
         try {
-			String hash = computeSHA1Hash(fileContents);
-			
-			// Check if hash already exists
-	        Optional<FileContent> existingContent = fileContentsRepository.findByHash(hash);
-	        FileContent fileContent = null;
+            String hash = computeSHA1Hash(fileContents);
 
-	        if (existingContent.isEmpty()) {
-	        	// Decide storage based on size
-	            FileContentLocation location = fileContents.getSize() > SIZE_CUTOFF ? FileContentLocation.S3 : FileContentLocation.DB;
-		        
-	            fileContent = new FileContent();
+            Optional<FileContent> existingContent = fileContentsRepository.findByHash(hash);
+            FileContent fileContent;
 
-	            fileContent.setHash(hash);
-	            fileContent.setLocation(location);
-	            
-	            if (location.equals(FileContentLocation.S3)) {
-	                String bucketName = environment.getProperty("aws.s3.bucket.name", "default-bucket");
+            if (existingContent.isEmpty()) {
+                FileContentLocation location = determineStorageLocation(fileContents);
+                fileContent = new FileContent();
 
-	                java.io.File tempFile = java.io.File.createTempFile("temp", fileContents.getOriginalFilename());
-	                fileContents.transferTo(tempFile);
-	                	                
-	                String s3Key = "files/" + hash;
-	                s3Service.uploadFile(bucketName, s3Key, tempFile.toPath());
-	                
-	                fileContent.setStorageUrl(s3Key);
-	                
-	            } else {
-	                byte[] contentBytes = fileContents.getBytes();
-	                logger.debug("File size (bytes): {}", contentBytes.length);
-	                
-	                fileContent.setContent(contentBytes);
-	            }
-	            
-	            fileContent = fileContentsRepository.save(fileContent);
-	        }
-	        else {
-				fileContent = existingContent.get();
-			}
-	        
-	        // Create and populate the File entity
-	        File file = new File();
-	        file.setName(fileDTO.getName());
-	        file.setPath(fileDTO.getPath()); // Set the file's path
-	        file.setRepository(repository);  // Associate the file with the repository
-	        file.setBranch(branch);  // Associate the file with the branch
-	        file.setLastModifiedAt(LocalDateTime.now()); // Optional: if metadata exists
-	        
-	        String filename = fileContents.getOriginalFilename(); // Gets the original filename of the uploaded file
+                fileContent.setHash(hash);
+                fileContent.setLocation(location);
 
-	        if (filename != null && filename.contains(".")) {
-	            String extension = filename.substring(filename.lastIndexOf(".") + 1);
-	            file.setType(extension);
-	        }	        
-	        if (fileContent.getStorageUrl() != null) {
-	        	file.setStorageUrl(fileContent.getStorageUrl());
-	        }
-	        // Save the file to the database
-	        File savedFile = fileRepository.save(file);
-	        
-	        Commit commit = new Commit();
-	        commit.setBranch(branch);
-	        commit.setRepository(repository);
-	        commit.setTimestamp(savedFile.getLastModifiedAt());
-	        commit.setMessage(fileDTO.getCommitMessage() == null ? "" : fileDTO.getCommitMessage());
-	        commit.setUser(user);
-	        
-	        Commit savedCommit = commitRepository.save(commit);
-	        
-	        FileVersion fileVersion = new FileVersion();
-	        fileVersion.setFile(savedFile);
-	        fileVersion.setHash(hash);
-	        fileVersion.setCreatedAt(savedFile.getLastModifiedAt());
-	        fileVersion.setVersionNumber(1);
-	        fileVersion.setSize(fileContents.getSize());
-	        fileVersion.setCommit(savedCommit);
-	        
-	        fileVersionRepository.save(fileVersion);	               
-			
-		} catch (Exception e) {
-			e.printStackTrace();
-			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Excpetion occurred while reading file");
-		}
+                if (location == FileContentLocation.S3) {
+                    handleS3Upload(fileContents, hash, fileContent);
+                } else {
+                    byte[] contentBytes = fileContents.getBytes();
+                    fileContent.setContent(contentBytes);
+                }
+
+                fileContent = fileContentsRepository.save(fileContent);
+            } else {
+                fileContent = existingContent.get();
+            }
+
+            File file = new File();
+            file.setName(fileDTO.getName());
+            file.setPath(fileDTO.getPath());
+            file.setRepository(repository);
+            file.setBranch(branch);
+            file.setLastModifiedAt(LocalDateTime.now());
+
+            setFileMetadata(file, fileContents, fileContent);
+            File savedFile = fileRepository.save(file);
+
+            Commit savedCommit = saveCommit(fileDTO, user, branch, repository, savedFile);
+            saveFileVersion(savedFile, hash, savedCommit, fileContents.getSize());
+
+        } catch (IOException | NoSuchAlgorithmException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to process file");
+        } 
     }
 
+    // Determines if the file should go to S3 or DB
+    private FileContentLocation determineStorageLocation(MultipartFile file) throws IOException {
+        String mimeType = file.getContentType();
+        boolean isBinary = mimeType != null && (
+                mimeType.startsWith("image/") ||
+                mimeType.startsWith("application/") ||
+                mimeType.startsWith("video/") ||
+                mimeType.startsWith("audio/")
+        );
+        return (file.getSize() > SIZE_CUTOFF || isBinary) ? FileContentLocation.S3 : FileContentLocation.DB;
+    }
 
+    // Handles S3 upload logic
+    private void handleS3Upload(MultipartFile file, String hash, FileContent fileContent) throws IOException {
+        String bucketName = environment.getProperty("aws.s3.bucket.name", "default-bucket");
+
+        java.io.File tempFile = java.io.File.createTempFile("temp", file.getOriginalFilename());
+        file.transferTo(tempFile);
+
+        String s3Key = "files/" + hash;
+        s3Service.uploadFile(bucketName, s3Key, tempFile.toPath());
+
+        fileContent.setStorageUrl(s3Key);
+    }
+
+    // Extracts and sets metadata for the file
+    private void setFileMetadata(File file, MultipartFile fileContents, FileContent fileContent) {
+        String filename = fileContents.getOriginalFilename();
+        if (filename != null && filename.contains(".")) {
+            String extension = filename.substring(filename.lastIndexOf(".") + 1);
+            file.setType(extension);
+        }
+        file.setMimeType(fileContents.getContentType());
+        if (fileContent.getStorageUrl() != null) {
+            file.setStorageUrl(fileContent.getStorageUrl());
+        }
+    }
+
+    // Saves commit information
+    private Commit saveCommit(FileDTO fileDTO, User user, Branch branch, Repository_ repository, File savedFile) {
+        Commit commit = new Commit();
+        commit.setBranch(branch);
+        commit.setRepository(repository);
+        commit.setTimestamp(savedFile.getLastModifiedAt());
+        commit.setMessage(fileDTO.getCommitMessage() == null ? "File upload" : fileDTO.getCommitMessage());
+        commit.setUser(user);
+        return commitRepository.save(commit);
+    }
+
+    // Saves file version after the commit
+    private void saveFileVersion(File file, String hash, Commit commit, long size) {
+        FileVersion fileVersion = new FileVersion();
+        fileVersion.setFile(file);
+        fileVersion.setHash(hash);
+        fileVersion.setCreatedAt(file.getLastModifiedAt());
+        fileVersion.setVersionNumber(1);
+        fileVersion.setSize(size);
+        fileVersion.setCommit(commit);
+        fileVersionRepository.save(fileVersion);
+    }
+
+    
     public void deleteFile(Long id) {
         if (!fileRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND,"File not found");
@@ -259,5 +276,100 @@ public class FileService {
         MessageDigest digest = MessageDigest.getInstance("SHA-1");
         byte[] hashBytes = digest.digest(file.getBytes());
         return Base64.getEncoder().encodeToString(hashBytes);
+    }
+	
+	public List<FileDTO> getFilesByPath(String username, String repoName, String branchName, String path, UserDetails userDetails) {
+        Long repositoryId = cacheService.getRepositoryId(username + "-" + repoName);
+        Repository_ repo = repositoryRepository.findById(repositoryId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Repository not found"));
+
+        Branch branch = repo.getBranches().stream()
+                .filter(brn -> brn.getName().equals(branchName))
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found"));
+
+        List<File> files = fileRepository.findByBranchId(branch.getId()).stream()
+                .filter(file -> file.getPath() != null && file.getPath().startsWith(path))
+                .collect(Collectors.toList());
+
+        return files.stream().map(this::mapEntityToDTO).collect(Collectors.toList());
+    }
+		
+	public ResponseEntity<?> getFileByPath(String username, String repoName, String branchName, String path, UserDetails userDetails) {
+	    Long repositoryId = cacheService.getRepositoryId(username + "-" + repoName);
+	    Repository_ repo = repositoryRepository.findById(repositoryId)
+	            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Repository not found"));
+
+	    Branch branch = repo.getBranches().stream()
+	            .filter(brn -> brn.getName().equals(branchName))
+	            .findFirst()
+	            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found"));
+
+	    String fileName = path.substring(path.lastIndexOf('/') + 1);
+	    path = path.endsWith(fileName) ? path.substring(0, path.length() - fileName.length()) : path;
+
+	    if (path.isEmpty()) {
+	        path = "/";
+	    } else if (path.charAt(0) != '/') {
+	        path = "/" + path;
+	    }
+	    
+	    final String filePath = path;
+
+	    // Find file by path and name
+	    File file = fileRepository.findByBranchId(branch.getId()).stream()
+	            .filter(f -> f.getPath() != null && f.getPath().equals(filePath) && f.getName().equals(fileName))
+	            .findFirst()
+	            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found"));
+
+	    if (file.getSize() > SIZE_CUTOFF || isBinaryFile(file.getMimeType())) {
+	        return handleLargeOrBinaryFile(file);
+	    } else {
+	        return handleSmallTextFile(file);
+	    }
+	}
+
+	private ResponseEntity<?> handleLargeOrBinaryFile(File file) {
+	    String bucketName = environment.getProperty("aws.s3.bucket.name", "default-bucket");
+	    byte[] s3Content = s3Service.downloadFile(bucketName, file.getStorageUrl());
+
+	    if (file.getMimeType().startsWith("image/")) {
+	        // Return as Base64 for images
+	        return ResponseEntity.ok()
+	                .header(HttpHeaders.CONTENT_TYPE, file.getMimeType())
+	                .body(Base64.getEncoder().encodeToString(s3Content));
+	    } else {
+	        // Offer as a direct download for other binary files
+	        return ResponseEntity.ok()
+	                .header(HttpHeaders.CONTENT_TYPE, file.getMimeType())
+	                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getName() + "\"")
+	                .contentLength(s3Content.length)
+	                .body(s3Content);
+	    }
+	}
+
+	private ResponseEntity<?> handleSmallTextFile(File file) {
+	    FileDTO fileDTO = mapEntityToDTO(file);
+
+	    // Fetch file contents for text files
+	    List<FileVersion> currentFileVersions = fileVersionRepository.findByFileIdOrderByVersionNumberDesc(file.getId());
+	    if (currentFileVersions == null || currentFileVersions.isEmpty()) {
+	        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File version not found");
+	    }
+	    String latestFileVersionHash = currentFileVersions.get(0).getHash();
+
+	    fileContentsRepository.findByHash(latestFileVersionHash)
+	            .ifPresent(content -> fileDTO.setContent(new String(content.getContent())));
+
+	    return ResponseEntity.ok().body(fileDTO);
+	}
+
+    private boolean isBinaryFile(String mimeType) {
+        return mimeType != null && (
+                mimeType.startsWith("image/") ||
+                mimeType.startsWith("application/") ||
+                mimeType.startsWith("video/") ||
+                mimeType.startsWith("audio/") ||
+                mimeType.startsWith("font/"));
     }
 }

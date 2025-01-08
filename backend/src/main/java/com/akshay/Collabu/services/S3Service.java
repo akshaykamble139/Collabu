@@ -6,8 +6,11 @@ import org.springframework.stereotype.Service;
 
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Service
@@ -39,17 +42,13 @@ public class S3Service {
         );
     }
     
-//    public String getUrlForFileInBucket(String bucketName, String key) {
-//    	GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucketName, fileKey)
-//                .withMethod(HttpMethod.GET)
-//                .withExpiration(new Date(System.currentTimeMillis() + 3600 * 1000)); // URL expires in 1 hour
-//
-//        // Generate the pre-signed URL
-//        URL preSignedUrl = s3Client.generatePresignedUrl(generatePresignedUrlRequest);
-//
-//        // Print the pre-signed URL
-//        System.out.println("Pre-signed URL: " + preSignedUrl.toString());
-//        
-//        return preSignedUrl.toString();
-//    }
+    public byte[] downloadFile(String bucketName, String s3Key) {
+        ResponseBytes<GetObjectResponse> objectBytes = s3Client.getObjectAsBytes(
+                GetObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(s3Key)
+                        .build()
+        );
+        return objectBytes.asByteArray();
+    }
 }

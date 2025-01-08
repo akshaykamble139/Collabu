@@ -32,8 +32,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { showNotification } from '../redux/notificationSlice';
 import apiService from '../services/apiService';
 import { hideConfirmationDialog, showConfirmationDialog } from '../redux/confirmationDialogSlice';
-import AddFileForm from '../forms/AddFileForm';
-import ForkRepositoryForm from '../forms/ForkRepositoryForm';
+import AddFileForm from '../globalComponents/forms/AddFileForm';
+import ForkRepositoryForm from '../globalComponents/forms/ForkRepositoryForm';
 const RepositoryPage = () => {
   const { username, repoName, branchName = 'main' } = useParams(); // Default to 'main'
   const [repo, setRepo] = useState(null);
@@ -373,8 +373,11 @@ const handleFileUpload = async (fileName, commitMessage, file) => {
                     <Trash size={16} />
                   </IconButton> : null
                 }
-              >
-                <ListItemText primary={file.name} />
+              >                
+                <Link href={`/${username}/${repoName}/blob/${branchName}${file.path}${file.name}`} 
+                    style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <ListItemText primary={file.name} />
+                </Link>
               </ListItem>
             ))}
           </List>}

@@ -12,6 +12,6 @@ public class FileVersionDTO {
     @NotNull(message = "file if can't be null")
     private Long fileId;
     private int versionNumber;
-    private String content;
+    private String hash;
     private LocalDateTime createdAt;
 }

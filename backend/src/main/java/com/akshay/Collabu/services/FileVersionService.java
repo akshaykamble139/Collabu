@@ -26,6 +26,7 @@ public class FileVersionService {
         dto.setId(fileVersion.getId());
         dto.setFileId(fileVersion.getFile().getId());
         dto.setVersionNumber(fileVersion.getVersionNumber());
+        dto.setHash(fileVersion.getHash());
         dto.setCreatedAt(fileVersion.getCreatedAt());
         return dto;
     } 

@@ -37,6 +37,8 @@ const apiService = {
         instance.get(`/files/${username}/${repoName}/${branchName}`),
     fetchStarStatus: (ownerUsername, repositoryName) => 
         instance.post('/stars/status', {ownerUsername, repositoryName}),
+    fetchFileContent: (username, repoName, branchName, filePath) =>
+        instance.get(`/files/${username}/${repoName}/${branchName}/${filePath}`, {responseType: 'blob'}),
 
     toggleStar: (ownerUsername, repositoryName) => 
         instance.post('/stars/toggle', {ownerUsername, repositoryName}),

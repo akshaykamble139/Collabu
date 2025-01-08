@@ -16,7 +16,7 @@ import { Search, Star, GitFork, Code } from 'lucide-react';
 import { showNotification } from '../redux/notificationSlice';
 import apiService from '../services/apiService';
 import { hideConfirmationDialog, showConfirmationDialog } from '../redux/confirmationDialogSlice';
-import CreateRepositoryForm from '../forms/CreateRepositoryForm';
+import CreateRepositoryForm from '../globalComponents/forms/CreateRepositoryForm';
 
 const RepositoriesPage = () => {
   const { username } = useParams();

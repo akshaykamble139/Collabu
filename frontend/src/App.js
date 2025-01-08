@@ -8,12 +8,13 @@ import RepositoriesPage from "./pages/RepositoriesPage";
 import ErrorPage from "./pages/ErrorPage";
 import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "./redux/userSlice";
-import Header from "./pages/Header";
+import Header from "./globalComponents/Header";
 import RepositoryPage from "./pages/RepositoryPage";
-import GlobalNotification from "./pages/GlobalNotification";
+import GlobalNotification from "./globalComponents/GlobalNotification";
 import ReactivateAccount from "./pages/ReactivateAccount";
 import BranchesPage from "./pages/BranchesPage";
-import ConfirmationDialog from "./pages/ConfirmationDialog";
+import ConfirmationDialog from "./globalComponents/ConfirmationDialog";
+import FileViewerPage from "./pages/FileViewerPage";
 
 const App = () => {
   const userData = useSelector(state => state.user);
@@ -52,6 +53,7 @@ const App = () => {
         <Route path="/:username/repositories" element={<RepositoriesPage />} />
         <Route path="/:username/:repoName/branches" element={<BranchesPage />} />
         <Route path="/:username/:repoName/tree/:branchName" element={<RepositoryPage />} />
+        <Route path="/:username/:repoName/blob/:branchName/:filePath" element={<FileViewerPage />} />
         <Route path="/:username/:repoName" element={<RepositoryPage />} />
         <Route path="*" element={<ErrorPage />} /> 
         </Routes>

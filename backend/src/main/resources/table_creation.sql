@@ -37,7 +37,7 @@ CREATE TABLE `repositories` (
   CONSTRAINT `repositories_ibfk_2` FOREIGN KEY (`forked_from_id`) REFERENCES `repositories` (`id`)
 );
 
-CREATE TABLE `files` (
+REATE TABLE `files` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
   `repository_id` bigint NOT NULL,
@@ -48,6 +48,7 @@ CREATE TABLE `files` (
   `last_modified_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `is_deleted` tinyint(1) DEFAULT '0',
   `storage_url` varchar(255) DEFAULT NULL,
+  `mime_type` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `repository_id` (`repository_id`),
   KEY `files_ibfk_2` (`branch_id`),

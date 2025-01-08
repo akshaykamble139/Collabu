@@ -5,7 +5,7 @@ import { Container, Box, Typography, TextField, Button, Paper, InputAdornment } 
 import { Search, GitBranch } from 'lucide-react';
 import { showNotification } from "../redux/notificationSlice";
 import apiService from '../services/apiService';
-import CreateBranchForm from '../forms/CreateBranchForm';
+import CreateBranchForm from '../globalComponents/forms/CreateBranchForm';
 import { hideConfirmationDialog, showConfirmationDialog } from '../redux/confirmationDialogSlice';
 
 const BranchesPage = () => {

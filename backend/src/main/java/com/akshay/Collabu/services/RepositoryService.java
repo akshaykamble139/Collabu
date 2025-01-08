@@ -76,12 +76,12 @@ public class RepositoryService {
     	Long ownerId = cacheService.getUserId(repositoryDTO.getOwnerUsername());
     	
     	if (ownerId == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"User id doesn't exist for this username");    		
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Owner not found");    		
     	}
         // Check if a repository with the same name already exists for the user
         boolean exists = repositoryRepository.existsByNameAndOwnerId(repositoryDTO.getName(), ownerId);
         if (exists) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,"Repository with this name already exists for the user.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT,"Repository name already exists for this user");
         }
 
         // Create and populate the repository object
@@ -91,17 +91,6 @@ public class RepositoryService {
         repository.setOwner(userRepository.findById(ownerId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Owner not found")));
         repository.setVisibility(repositoryDTO.isPublicRepositoryOrNot() ? "public" : "private"); // Set visibility
-
-        // If it's a fork, associate it with the parent repository
-        if (repositoryDTO.isRepositoryForkedOrNot() && repositoryDTO.getParentRepositoryId() != null) {
-            Repository_ parentRepo = repositoryRepository.findById(repositoryDTO.getParentRepositoryId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Parent repository not found for forking."));
-            repository.setForkedFrom(parentRepo);
-            
-         // Increment fork count of parent repository
-            parentRepo.setForksCount(parentRepo.getForksCount() + 1);
-            repositoryRepository.save(parentRepo);  // Save updated fork count
-        }
 
         // Save and return the created repository as DTO
         Repository_ savedRepo = repositoryRepository.save(repository);

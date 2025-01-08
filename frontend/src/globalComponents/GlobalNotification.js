@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import ToastNotification from "./ToastNotification";
+import ToastNotification from "../globalComponents/ToastNotification";
 import { hideNotification } from "../redux/notificationSlice";
 
 const GlobalNotification = () => {

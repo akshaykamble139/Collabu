@@ -22,6 +22,8 @@ import com.akshay.Collabu.services.FileService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 @RestController
 @RequestMapping("/files")
 public class FileController {
@@ -61,5 +63,27 @@ public class FileController {
     	fileService.createFile(fileDTO, fileContents, userDetails);
         return ResponseEntity.status(HttpStatus.CREATED).body("File created successfully!");
     }
+    
+    @GetMapping("/{username}/{repoName}/{branchName}/**")
+    public ResponseEntity<?> getFileOrDirectory(
+            @PathVariable String username,
+            @PathVariable String repoName,
+            @PathVariable String branchName,
+            HttpServletRequest request,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        // Extract the filepath after /branchName/
+        String filepath = request.getRequestURI().split(branchName + "/", 2)[1];
+        
+        if (filepath.isEmpty() || filepath.endsWith("/")) {
+            // If the path is empty or ends with '/', treat it as a directory
+            List<FileDTO> files = fileService.getFilesByPath(username, repoName, branchName, filepath, userDetails);
+            return ResponseEntity.ok(files);
+        } else {
+            // If the path has a file name, retrieve file content
+            return fileService.getFileByPath(username, repoName, branchName, filepath, userDetails);
+        }
+    }
+
 }
 

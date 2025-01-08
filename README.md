@@ -76,7 +76,12 @@ The Code Collaboration Platform is a portfolio project designed to simulate a Gi
 
 ---
 
-#### **Current Version:** v0.22
+#### **Current Version:** v0.23
+
+File service classes updated to handle creating files of all types, text based and binary files. Small text based files will be saved in db whereas large text based files as well as binary files will be stored in aws s3 bucket. New endpoint created to retrieve files and display their contents on new FileViewerPage in case of small text-based file or image, otherwise a download button is displayed for user to download the file.
+
+#### v0.22
+
 Code refactored in front end. New files created to clean up the components so that only relevant parts remain. A new service created to handle all api calls from one place. New reducer created in redux store for handling the global component for dialog.
 
 #### v0.21

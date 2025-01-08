@@ -1,7 +1,6 @@
 package com.akshay.Collabu.exceptions;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -11,6 +10,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
 import io.jsonwebtoken.ExpiredJwtException;
@@ -72,7 +72,16 @@ public class GlobalExceptionHandler {
 	    return new ResponseEntity<>(errorResponse, HttpStatusCode.valueOf(Integer.valueOf(messageArray[0])));
     }
 
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxSizeException(MaxUploadSizeExceededException exc) {
+    	 Map<String, String> errors = new HashMap<>();
+ 		errors.put("error", "Upload Size limit exceeded");
+ 		errors.put("message", "File size exceeds the maximum allowed size!");
 
+ 	    ErrorResponse errorResponse = new ErrorResponse("Upload Size limit exceeded", errors);
+ 	    return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+    
     // Handle other exceptions (generic example)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<String> handleGlobalException(Exception ex) {

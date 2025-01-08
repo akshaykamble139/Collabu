@@ -50,6 +50,9 @@ public class File {
     
     @Column(name = "storage_url")
     private String storageUrl;
+    
+    @Column(name = "mime_type")
+    private String mimeType; 
 
     @Override
     public boolean equals(Object o) {

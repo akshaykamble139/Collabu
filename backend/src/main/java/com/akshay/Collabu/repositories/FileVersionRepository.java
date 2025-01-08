@@ -10,7 +10,7 @@ import com.akshay.Collabu.models.FileVersion;
 
 @Repository
 public interface FileVersionRepository extends JpaRepository<FileVersion, Long> {
-    List<FileVersion> findByFileIdOrderByVersionNumberAsc(Long fileId);
+    List<FileVersion> findByFileIdOrderByVersionNumberDesc(Long fileId);
 
     Optional<FileVersion> findByFileIdAndVersionNumber(Long fileId, int versionNumber);
 
