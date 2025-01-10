@@ -15,11 +15,12 @@ import {
 import { Search, Star, GitFork, Code } from 'lucide-react';
 import { showNotification } from '../redux/notificationSlice';
 import apiService from '../services/apiService';
-import { hideConfirmationDialog, showConfirmationDialog } from '../redux/confirmationDialogSlice';
 import CreateRepositoryForm from '../globalComponents/forms/CreateRepositoryForm';
+import { useConfirmationDialog } from '../globalComponents/ConfirmationDialogContext';
 
 const RepositoriesPage = () => {
   const { username } = useParams();
+  const { showDialog, hideDialog } = useConfirmationDialog();
   const [repos, setRepos] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [newRepo, setNewRepo] = useState({ name: '', description: '', publicRepositoryOrNot: true });
@@ -73,8 +74,7 @@ const RepositoriesPage = () => {
       currentNewRepo = repo;
     }
     if (userData?.username === username){
-      dispatch(
-        showConfirmationDialog({
+      showDialog({
           title: "Create a new repository",
           message: (
             <CreateRepositoryForm
@@ -84,8 +84,7 @@ const RepositoriesPage = () => {
           ),
           confirmText: "Create repository",
           onConfirm: ()  => handleCreateRepo(currentNewRepo),
-        })
-      );
+        });
     }
   }
 
@@ -102,7 +101,7 @@ const RepositoriesPage = () => {
           newRepo.name, newRepo.description, userData.username, newRepo.publicRepositoryOrNot,
         );
         setRepos([...repos, response.data]);
-        dispatch(hideConfirmationDialog())
+        hideDialog();
         setNewRepo({ name: '', description: '', publicRepositoryOrNot: true });
         dispatch(showNotification({ message: "Repository created successfully!", type: "success" }));
         navigate(`/${userData.username}/${response.data.name}`);
@@ -122,7 +121,7 @@ const RepositoriesPage = () => {
         <Typography variant="h4">
           {username ? `${username}'s Repositories` : 'Your Repositories'}
         </Typography>
-        {(username === userData?.username) && (
+        {((username && userData?.username === username) || (!username)) && (
           <Button
             variant="contained"
             color="primary"

@@ -15,6 +15,7 @@ import ReactivateAccount from "./pages/ReactivateAccount";
 import BranchesPage from "./pages/BranchesPage";
 import ConfirmationDialog from "./globalComponents/ConfirmationDialog";
 import FileViewerPage from "./pages/FileViewerPage";
+import { ConfirmationDialogProvider } from "./globalComponents/ConfirmationDialogContext";
 
 const App = () => {
   const userData = useSelector(state => state.user);
@@ -41,6 +42,7 @@ const App = () => {
 
   return (
     <Router>
+      <ConfirmationDialogProvider>
       <Header isUserLoggedIn={isUserLoggedIn} username={userData?.username} />
       <GlobalNotification />  
       <ConfirmationDialog />
@@ -57,6 +59,7 @@ const App = () => {
         <Route path="/:username/:repoName" element={<RepositoryPage />} />
         <Route path="*" element={<ErrorPage />} /> 
         </Routes>
+        </ConfirmationDialogProvider>
     </Router>
   );
 };

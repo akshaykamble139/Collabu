@@ -76,7 +76,11 @@ The Code Collaboration Platform is a portfolio project designed to simulate a Gi
 
 ---
 
-#### **Current Version:** v0.24
+#### **Current Version:** v0.25
+
+Confirmation dialogue state shifted from redux store to react context as it contained a JSX component in one of its state which isn't used in redux as it is not serializable. A new file called RepositoryCode created from RepostoryPage to handle file and folder viewing in future versions to have ui like github to navigate between files in the project structure.
+
+#### v0.24
 
 Redis added to store frequently fetched data like repository list, branches list, files list. New files created for repository, branch and file services to handle caching and evicting. Also new local cache created for branch id and (username+repositoryName+branchName) key mapping. And one for visibility of repository id to reduce db queries. 
 

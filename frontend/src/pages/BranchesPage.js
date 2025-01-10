@@ -6,7 +6,7 @@ import { Search, GitBranch } from 'lucide-react';
 import { showNotification } from "../redux/notificationSlice";
 import apiService from '../services/apiService';
 import CreateBranchForm from '../globalComponents/forms/CreateBranchForm';
-import { hideConfirmationDialog, showConfirmationDialog } from '../redux/confirmationDialogSlice';
+import { useConfirmationDialog } from '../globalComponents/ConfirmationDialogContext';
 
 const BranchesPage = () => {
   const { username, repoName } = useParams();
@@ -15,6 +15,7 @@ const BranchesPage = () => {
   const [newBranch, setNewBranch] = useState({ name: '', sourceBranch: 'main' });
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { showDialog, hideDialog } = useConfirmationDialog();
 
    useEffect(() => {
       const fetchBranches = async () => {
@@ -50,7 +51,7 @@ const BranchesPage = () => {
       }
       const response = await apiService.createBranch(newBranch.name,newBranch.sourceBranch, repoName);
       setBranches([...branches, response.data]);
-      dispatch(hideConfirmationDialog());
+      hideDialog();
       setNewBranch({ name: '', sourceBranch: 'main' });
       dispatch(showNotification({ message: "Branch created successfully!", type: "success" }));
     } catch (err) {
@@ -70,10 +71,9 @@ const BranchesPage = () => {
       sourceBranchName = sourceBranch;
     };
 
-    dispatch(
-      showConfirmationDialog({
+    showDialog({
         title: "Create a new branch",
-        message: (
+        component: () => (
           <CreateBranchForm
             branches={branches}
             newBranchName={newBranchName}
@@ -85,8 +85,7 @@ const BranchesPage = () => {
         confirmText: "Create branch",
         onConfirm: () => handleCreateBranch({name: newBranchName, sourceBranch: sourceBranchName}),
   
-      })
-    );
+      });
   }
 
   const filteredBranches = branches.filter(branch =>

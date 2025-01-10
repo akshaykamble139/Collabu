@@ -5,17 +5,18 @@ import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../redux/userSlice";
 import { showNotification } from "../redux/notificationSlice";
 import apiService from "../services/apiService";
-import { hideConfirmationDialog, showConfirmationDialog } from "../redux/confirmationDialogSlice";
+import { useConfirmationDialog } from "../globalComponents/ConfirmationDialogContext";
 
 const ProfilePage = () => {
   const { username } = useParams();
   const navigate = useNavigate();
   const [user, setUser] = useState({ username: "", email: "", bio: "", location: "", website: "", profilePicture: "" });
   const [password, setPassword] = useState("");
+  const { showDialog, hideDialog } = useConfirmationDialog();
   const [loading, setLoading] = useState(false);
   const userData = useSelector(state => state.user);
   const dispatch = useDispatch();
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);  
 
   useEffect(() => {
     if (!username && userData.username) {
@@ -96,16 +97,17 @@ const ProfilePage = () => {
   };
 
   const handleConfirmDialog = async (action) => {
-    dispatch(hideConfirmationDialog());
     if (action === "deactivate") {
       await apiService.deactivateAccount();
       dispatch(showNotification({ message: "Account deactivated.", type: "success" }));
+      hideDialog();
       setTimeout(() => {
         handleLogout();
       },1500);
     } else if (action === "delete") {
       await apiService.deleteAccount();
       dispatch(showNotification({ message: "Account deleted.", type: "success" }));
+      hideDialog();
       setTimeout(() => {
         handleLogout();
       },1500);
@@ -120,18 +122,16 @@ const ProfilePage = () => {
     const message = action === "delete"
     ? "Are you sure you want to delete your account? This action is irreversible."
     : "Are you sure you want to deactivate your account?"
-    dispatch(
-      showConfirmationDialog({
+    showDialog({
         title: title,
-        message: (
+        component: () => (
           <Typography>
             {message}        
         </Typography>
         ),
         confirmText: title,
         onConfirm: onConfirm,
-      })
-    );
+      });
   };
 
   return (
