@@ -28,7 +28,7 @@ const ToastNotification = ({ message, type = "success", onClose }) => {
           backgroundColor: type === "success" ? "#4caf50" : "#f44336",
           color: "white",
           textAlign: "center",
-          zIndex: 1300,
+          zIndex: 1400,
         }}
       >
         <Typography variant="body1">{message}</Typography>

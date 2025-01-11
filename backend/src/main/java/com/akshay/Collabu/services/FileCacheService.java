@@ -6,7 +6,9 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -79,15 +81,15 @@ public class FileCacheService {
 
     @Transactional
     @Caching(evict = {
-	        @CacheEvict(value = "files", key = "#branchId")
+	        @CacheEvict(value = "files", key = "#branchId + '-' + #fullPath")
 	    })
-    public void createFileForBranchId(FileDTO fileDTO, MultipartFile fileContents, Long branchId) {
+    public void createFileForBranchIdAndPath(FileDTO fileDTO, MultipartFile fileContents, Long branchId, String fullPath) {
     	
         Branch branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found"));
-
+        
         boolean fileExists = fileRepository.existsByNameAndPathAndBranchId(
-                fileDTO.getName(), fileDTO.getPath(), branch.getId()
+                fileDTO.getName(), fullPath, branch.getId()
         );
         if (fileExists) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "File already exists in this path.");
@@ -123,7 +125,7 @@ public class FileCacheService {
 
             File file = new File();
             file.setName(fileDTO.getName());
-            file.setPath(fileDTO.getPath());
+            file.setPath(fullPath);
             file.setRepository(repository);
             file.setBranch(branch);
             file.setLastModifiedAt(LocalDateTime.now());
@@ -200,12 +202,49 @@ public class FileCacheService {
         fileVersionRepository.save(fileVersion);
     }
 
-    @Cacheable(value = "files", key = "#branchId")
-	public List<FileDTO> getFilesByBranchId(Long branchId) {
-		Branch branch = branchRepository.findById(branchId)
-						.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Branch not found"));    	
+    @Cacheable(value = "files", key = "#branchId + '-' + #filePath")
+	public List<FileDTO> getFilesByBranchIdAndFilePath(Long branchId, String filePath) {
     	
-		return fileRepository.findByBranchId(branch.getId()).stream().map(file -> mapEntityToDTO(file)).collect(Collectors.toList());
+		List<File> allFiles = fileRepository.findByBranchId(branchId).stream()
+                .filter(file -> file.getPath() != null && file.getPath().startsWith(filePath))
+                .collect(Collectors.toList());
+        
+        // Files directly in the given directory
+        List<File> filesInDirectory = allFiles.stream()
+                .filter(file -> file.getPath() != null && file.getPath().equals(filePath))
+                .collect(Collectors.toList());
+
+        // Folders (subdirectories directly under the given directory)
+        Set<String> folderNames = allFiles.stream()
+                .filter(file -> file.getPath() != null && file.getPath().startsWith(filePath) && !file.getPath().equals(filePath))
+                .map(file -> {
+                    // Extract the immediate next directory name from the path
+                    String subPath = file.getPath().substring(filePath.length());
+                    int slashIndex = subPath.indexOf('/');
+                    return (slashIndex != -1) ? subPath.substring(0, slashIndex) : null;
+                })
+                .filter(Objects::nonNull) // Filter out null values
+                .collect(Collectors.toSet());
+
+        // Map files to DTOs
+        List<FileDTO> fileDTOs = filesInDirectory.stream()
+                .map(this::mapEntityToDTO)
+                .collect(Collectors.toList());
+
+        // Add folders as DTOs
+        for (String folderName : folderNames) {
+            FileDTO folderDTO = new FileDTO();
+            folderDTO.setName(folderName);
+            folderDTO.setPath(filePath);
+            folderDTO.setType("folder"); // Mark it as a folder
+            folderDTO.setMimeType(null);
+            fileDTOs.add(folderDTO);
+        }
+
+        if (fileDTOs.isEmpty()) {
+        	throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Files not found");
+        }
+        return fileDTOs;
 	}
 	
 	public String computeSHA1Hash(MultipartFile file) throws IOException, NoSuchAlgorithmException {

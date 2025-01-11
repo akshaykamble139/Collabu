@@ -33,8 +33,8 @@ const apiService = {
         instance.get(`/repositories/${username}/${repoName}`),
     fetchBranches: (username, repoName) => 
         instance.get(`/branches/${username}/${repoName}`),
-    fetchFilesFromBranch: (username, repoName, branchName) =>
-        instance.get(`/files/${username}/${repoName}/${branchName}`),
+    fetchFilesFromBranch: (username, repoName, branchName, filePath) =>
+        instance.get(`/files/${username}/${repoName}/${branchName}${filePath}`),
     fetchStarStatus: (ownerUsername, repositoryName) => 
         instance.post('/stars/status', {ownerUsername, repositoryName}),
     fetchFileContent: (username, repoName, branchName, filePath) =>

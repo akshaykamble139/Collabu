@@ -2,6 +2,7 @@ package com.akshay.Collabu.services;
 
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -17,23 +18,17 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.akshay.Collabu.dto.FileDTO;
-import com.akshay.Collabu.models.Branch;
 import com.akshay.Collabu.models.File;
 import com.akshay.Collabu.models.FileVersion;
-import com.akshay.Collabu.models.Repository_;
 import com.akshay.Collabu.repositories.FileContentsRepository;
 import com.akshay.Collabu.repositories.FileRepository;
 import com.akshay.Collabu.repositories.FileVersionRepository;
-import com.akshay.Collabu.repositories.RepositoryRepository;
 
 @Service
 public class FileService {
     @Autowired
     private FileRepository fileRepository;
-    
-    @Autowired
-    private RepositoryRepository repositoryRepository;
-    
+
     @Autowired
     private S3Service s3Service;
     
@@ -91,7 +86,16 @@ public class FileService {
         	throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found");
         }
         
-        fileCacheService.createFileForBranchId(fileDTO, fileContents, branchId);
+        String fullPath = fileDTO.getPath();
+        if (!fullPath.startsWith("/")) {
+            fullPath = "/" + fullPath;
+        }
+        
+        if (!fullPath.endsWith("/")) {
+            fullPath += "/";
+        }
+        
+        fileCacheService.createFileForBranchIdAndPath(fileDTO, fileContents, branchId, fullPath);
     }
     
     public void deleteFile(Long id) {
@@ -133,36 +137,63 @@ public class FileService {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Branch not found");
 		}
 		
-		return fileCacheService.getFilesByBranchId(branchId);
+		return fileCacheService.getFilesByBranchIdAndFilePath(branchId,"/");
 	}
 	
 	public List<FileDTO> getFilesByPath(String username, String repoName, String branchName, String path, UserDetails userDetails) {
+
         Long repositoryId = cacheService.getRepositoryId(username + "-" + repoName);
-        Repository_ repo = repositoryRepository.findById(repositoryId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Repository not found"));
 
-        Branch branch = repo.getBranches().stream()
-                .filter(brn -> brn.getName().equals(branchName))
-                .findFirst()
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found"));
+        if (repositoryId == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Repository not found");
+        }
+        
+		Boolean isPublic = cacheService.getRepositoryVisibility(repositoryId);
+    	
+    	if (!username.equals(userDetails.getUsername()) && !isPublic) {
+    		throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Repository not found");
+    	}
+        
+        Long branchId = cacheService.getBranchId(username + "-" + repoName + "-" + branchName);
 
-        List<File> files = fileRepository.findByBranchId(branch.getId()).stream()
-                .filter(file -> file.getPath() != null && file.getPath().startsWith(path))
-                .collect(Collectors.toList());
-
-        return files.stream().map(this::mapEntityToDTO).collect(Collectors.toList());
+        if (branchId == null) {
+        	throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found");
+        }
+        
+        if (path.isEmpty()) {
+            path = "/";
+        } else if (!path.endsWith("/")) {
+            path = path + "/";
+        }
+        
+        if (path.charAt(0) != '/') {
+	        path = "/" + path;
+	    }
+        
+        final String filePath = path;
+        
+        return fileCacheService.getFilesByBranchIdAndFilePath(branchId, filePath);
     }
 		
 	public ResponseEntity<?> getFileByPath(String username, String repoName, String branchName, String path, UserDetails userDetails) {
+
 	    Long repositoryId = cacheService.getRepositoryId(username + "-" + repoName);
-	    Repository_ repo = repositoryRepository.findById(repositoryId)
-	            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Repository not found"));
 
-	    Branch branch = repo.getBranches().stream()
-	            .filter(brn -> brn.getName().equals(branchName))
-	            .findFirst()
-	            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found"));
+        if (repositoryId == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Repository not found");
+        }
+        
+		Boolean isPublic = cacheService.getRepositoryVisibility(repositoryId);
+    	
+    	if (!username.equals(userDetails.getUsername()) && !isPublic) {
+    		throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Repository not found");
+    	}
+        
+        Long branchId = cacheService.getBranchId(username + "-" + repoName + "-" + branchName);
 
+        if (branchId == null) {
+        	throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found");
+        }
 	    String fileName = path.substring(path.lastIndexOf('/') + 1);
 	    path = path.endsWith(fileName) ? path.substring(0, path.length() - fileName.length()) : path;
 
@@ -175,11 +206,14 @@ public class FileService {
 	    final String filePath = path;
 
 	    // Find file by path and name
-	    File file = fileRepository.findByBranchId(branch.getId()).stream()
+	    Optional<File> fileOptional = fileRepository.findByBranchId(branchId).stream()
 	            .filter(f -> f.getPath() != null && f.getPath().equals(filePath) && f.getName().equals(fileName))
-	            .findFirst()
-	            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found"));
-
+	            .findFirst();
+	    
+	    if (fileOptional.isEmpty()) {
+	    	return ResponseEntity.ok(getFilesByPath(username, repoName, branchName, filePath + fileName + "/", userDetails));
+	    }
+	    File file = fileOptional.get();
 	    if (file.getSize() > SIZE_CUTOFF || isBinaryFile(file.getMimeType())) {
 	        return handleLargeOrBinaryFile(file);
 	    } else {

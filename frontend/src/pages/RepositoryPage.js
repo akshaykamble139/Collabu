@@ -24,6 +24,7 @@ import { useConfirmationDialog } from '../globalComponents/ConfirmationDialogCon
 import RepositoryCode from './RepositoryCode';
 const RepositoryPage = () => {
   const { username, repoName, branchName = 'main' } = useParams(); // Default to 'main'
+  const filePath = window.location.pathname.split('/tree/')[1]?.split('/')?.slice(2).join('/');
   const { showDialog, hideDialog } = useConfirmationDialog();
   const [repo, setRepo] = useState(null);
   const [currentTab, setCurrentTab] = useState(0);
@@ -96,6 +97,7 @@ const openDeleteDialog = () => {
       {currentTab === 0 && repo !== null && (
           <RepositoryCode 
             propRepo={repo} 
+            propFilePath={filePath === null || filePath === undefined ? "/" : filePath[filePath.length - 1] !== '/' ? filePath+"/" : filePath}
           />
       )}
 

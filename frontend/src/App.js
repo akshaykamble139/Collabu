@@ -54,8 +54,9 @@ const App = () => {
         <Route path="/profile/:username" element={<ProfilePage />} />
         <Route path="/:username/repositories" element={<RepositoriesPage />} />
         <Route path="/:username/:repoName/branches" element={<BranchesPage />} />
+        <Route path="/:username/:repoName/tree/:branchName/*" element={<RepositoryPage />} />
         <Route path="/:username/:repoName/tree/:branchName" element={<RepositoryPage />} />
-        <Route path="/:username/:repoName/blob/:branchName/:filePath" element={<FileViewerPage />} />
+        <Route path="/:username/:repoName/blob/:branchName/*" element={<RepositoryPage />} />
         <Route path="/:username/:repoName" element={<RepositoryPage />} />
         <Route path="*" element={<ErrorPage />} /> 
         </Routes>

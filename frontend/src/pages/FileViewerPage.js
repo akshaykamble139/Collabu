@@ -1,13 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Box, Typography, CircularProgress, Paper, Button, Avatar } from '@mui/material';
 import apiService from '../services/apiService';
 
 const FileViewerPage = () => {
-  const { username, repoName, branchName = 'main', filePath } = useParams();
+  const { username, repoName, branchName = 'main' } = useParams();
+  const location = useLocation();
+  const [filePath, setFilePath] = useState(window.location.pathname.split("/blob/" + branchName + "/")[1]);
   const [fileData, setFileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const first = location.pathname.split("/blob/");
+    const suffix = first[1].split("/");
+    setFilePath(suffix.slice(1,suffix.length).join("/"));
+  }, [location.pathname])
 
   useEffect(() => {
     const fetchFileContent = async () => {
@@ -15,6 +24,11 @@ const FileViewerPage = () => {
         const response = await apiService.fetchFileContent(username, repoName, branchName, filePath, {
           responseType: 'blob', // Treat the response as a Blob
         });
+
+        if (response.data && Array.isArray(response.data) && (response.data.length > 1 || 
+          (response.data.length == 1 && response.data[0].type === "folder"))) {
+            window.location = window.location.pathname.replace("blob", "tree");
+        }
 
         const contentType = response.headers['content-type'];
         const contentDisposition = response.headers['content-disposition'];
@@ -55,13 +69,15 @@ const FileViewerPage = () => {
         }
       } catch (err) {
         console.error('Error loading file:', err);
-        setError('Failed to load file content.');
+        navigate('/error', { state: { code: err?.response?.code ? err.response.code : 404 } });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchFileContent();
+    if (username && repoName && branchName && filePath) {
+      fetchFileContent();
+    }
 
     // Cleanup function to revoke object URLs
     return () => {
@@ -69,7 +85,7 @@ const FileViewerPage = () => {
         URL.revokeObjectURL(fileData.downloadUrl);
       }
     };
-  }, [username, repoName, branchName, filePath]);
+  }, [username, repoName, branchName, location.pathname]);
 
   if (loading) return <CircularProgress />;
   if (error) return <Typography color="error">{error}</Typography>;

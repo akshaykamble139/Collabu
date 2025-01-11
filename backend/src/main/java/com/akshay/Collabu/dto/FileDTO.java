@@ -23,7 +23,10 @@ public class FileDTO implements Serializable{
     private String content;
     
     @NotBlank(message = "Path can't be empty")
-    private String path;          // New field for file path
+    @Pattern(regexp = "^[a-zA-Z][a-zA-Z0-9_/.-]*$", 
+    message = "File path must start with an alphabet and can contain alphanumeric characters, underscores, dots, or slashes.")
+    private String path;  // Path now represents folder structure (e.g., "folder1/folder2/file.txt")
+
     private String type = "file";
     
     @NotBlank(message = "Repository name can't be empty")
