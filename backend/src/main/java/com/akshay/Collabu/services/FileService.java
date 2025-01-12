@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.akshay.Collabu.dto.FileDTO;
+import com.akshay.Collabu.dto.TreeNode;
 import com.akshay.Collabu.models.File;
 import com.akshay.Collabu.models.FileVersion;
 import com.akshay.Collabu.repositories.FileContentsRepository;
@@ -264,4 +265,160 @@ public class FileService {
                 mimeType.startsWith("audio/") ||
                 mimeType.startsWith("font/"));
     }
+
+//	public TreeNode buildTreeToPath(String username, String repoName, String branchName, String currentPath,
+//			UserDetails userDetails) {
+//		Long repositoryId = cacheService.getRepositoryId(username + "-" + repoName);
+//
+//        if (repositoryId == null) {
+//            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Repository not found");
+//        }
+//        
+//		Boolean isPublic = cacheService.getRepositoryVisibility(repositoryId);
+//    	
+//    	if (!username.equals(userDetails.getUsername()) && !isPublic) {
+//    		throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Repository not found");
+//    	}
+//        
+//        Long branchId = cacheService.getBranchId(username + "-" + repoName + "-" + branchName);
+//
+//        if (branchId == null) {
+//        	throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found");
+//        }
+//                
+//        List<File> files = fileRepository.findByBranchId(branchId).stream()
+//                .filter(file -> file.getPath() != null && file.getPath().startsWith("/"))
+//                .collect(Collectors.toList());
+//        
+//        // Root node
+//        TreeNode root = new TreeNode("/", "folder");
+//
+//        // Build tree till the current path
+//        Map<String, TreeNode> nodeMap = new HashMap<>();
+//        nodeMap.put("/", root);
+//        
+//        int maxPathLength = currentPath.split("/").length;
+//
+//        for (File file : files) {
+//            String fullPath = file.getPath() + file.getName();
+//
+//            String[] parts = fullPath.split("/");
+//            StringBuilder currentPathBuilder = new StringBuilder("/");
+//            TreeNode parent = root;
+//
+//            for (int i = 1; i < parts.length; i++) {
+//                currentPathBuilder.append(parts[i]);
+//                String key = currentPathBuilder.toString();
+//
+//                if (!nodeMap.containsKey(key)) {
+//                    TreeNode newNode = (i == parts.length - 1 && "folder".equals(file.getType()))
+//                            ? new TreeNode(parts[i], "folder")
+//                            : new TreeNode(parts[i], "file");
+//
+//                    nodeMap.put(key, newNode);
+//                    parent.addChild(newNode);
+//                }
+//
+//                parent = nodeMap.get(key);
+//                currentPathBuilder.append("/");
+//            }
+//        }
+//
+//        return root;
+//
+//	}
+
+	public TreeNode buildTreeToPath(String username, String repoName, String branchName, String currentPath,
+			UserDetails userDetails) {
+		Long repositoryId = cacheService.getRepositoryId(username + "-" + repoName);
+
+		if (repositoryId == null) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Repository not found");
+		}
+
+		Boolean isPublic = cacheService.getRepositoryVisibility(repositoryId);
+
+		if (!username.equals(userDetails.getUsername()) && !isPublic) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Repository not found");
+		}
+
+		Long branchId = cacheService.getBranchId(username + "-" + repoName + "-" + branchName);
+
+		if (branchId == null) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found");
+		}
+
+		// Root node
+		TreeNode root = new TreeNode("/", "folder","/");		
+		String[] pathsArr = currentPath.split("/");
+		
+		if (currentPath.equals("/")) {
+			 List<FileDTO> fileDTOs = fileCacheService.getFilesByBranchIdAndFilePath(branchId, currentPath);    
+		        
+	        for(FileDTO fileDTO: fileDTOs){
+	        	TreeNode childNode = new TreeNode(fileDTO.getName(), fileDTO.getType(), fileDTO.getPath());
+				root.addChild(childNode);
+	        }
+			return root;
+		}
+		else {
+			StringBuilder currentPathStringBuilder = new StringBuilder("");
+			TreeNode parentNode = root;
+			for (int i = 0; i < pathsArr.length; i++) {
+				currentPathStringBuilder.append(pathsArr[i]).append("/");
+				String path = currentPathStringBuilder.toString();
+				String folderName = pathsArr[i];
+				if (i != 0) {
+					parentNode = parentNode.getChildren().stream()
+							.filter(node -> node.getName().equals(folderName))
+							.findFirst()
+							.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Folder not found"));
+				}
+		        List<FileDTO> fileDTOs = fileCacheService.getFilesByBranchIdAndFilePath(branchId, path);    
+		        
+		        for(FileDTO fileDTO: fileDTOs){
+		        	TreeNode childNode = new TreeNode(fileDTO.getName(), fileDTO.getType(), fileDTO.getPath());
+					parentNode.addChild(childNode);
+		        }
+			}
+		}
+		
+		return root;
+	}
+	
+	public TreeNode buildTreeForCurrentFolder(String username, String repoName, String branchName, String currentPath,
+			UserDetails userDetails) {
+		Long repositoryId = cacheService.getRepositoryId(username + "-" + repoName);
+
+        if (repositoryId == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Repository not found");
+        }
+        
+		Boolean isPublic = cacheService.getRepositoryVisibility(repositoryId);
+    	
+    	if (!username.equals(userDetails.getUsername()) && !isPublic) {
+    		throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Repository not found");
+    	}
+        
+        Long branchId = cacheService.getBranchId(username + "-" + repoName + "-" + branchName);
+
+        if (branchId == null) {
+        	throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found");
+        }
+                
+        List<FileDTO> fileDTOs = fileCacheService.getFilesByBranchIdAndFilePath(branchId, currentPath);    
+        
+        String g = currentPath.equals("/") ? "/" : currentPath.substring(0,currentPath.length()-1);
+        String folderName = currentPath.equals("/") ? "/" : g.substring(g.lastIndexOf('/') + 1);
+        String path = currentPath.equals("/") ? "/" : g.substring(0, g.length()-folderName.length());
+        // Root node
+        TreeNode root = new TreeNode(folderName, "folder", path);
+        
+        fileDTOs.stream().forEach(fileDTO -> {
+			TreeNode childNode = new TreeNode(fileDTO.getName(), fileDTO.getType(), fileDTO.getPath());
+			root.addChild(childNode);
+		});
+        
+        return root;       
+	}
 }

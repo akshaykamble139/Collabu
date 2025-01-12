@@ -6,35 +6,18 @@ import RegisterPage from "./pages/RegisterPage";
 import ProfilePage from "./pages/ProfilePage";
 import RepositoriesPage from "./pages/RepositoriesPage";
 import ErrorPage from "./pages/ErrorPage";
-import { useDispatch, useSelector } from "react-redux";
-import { setUser } from "./redux/userSlice";
+import { useSelector } from "react-redux";
 import Header from "./globalComponents/Header";
 import RepositoryPage from "./pages/RepositoryPage";
 import GlobalNotification from "./globalComponents/GlobalNotification";
 import ReactivateAccount from "./pages/ReactivateAccount";
 import BranchesPage from "./pages/BranchesPage";
 import ConfirmationDialog from "./globalComponents/ConfirmationDialog";
-import FileViewerPage from "./pages/FileViewerPage";
 import { ConfirmationDialogProvider } from "./globalComponents/ConfirmationDialogContext";
 
 const App = () => {
   const userData = useSelector(state => state.user);
   const [isUserLoggedIn, setUserLogin] = useState(false);
-
-  const dispatch = useDispatch();
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const username = localStorage.getItem("username");
-
-  if (typeof(token) !== "undefined" && typeof(username) !== "undefined" && token && username) {
-    dispatch(setUser({username: username, token: token}));
-    console.log("userdata set",userData);
-  }
-  else {
-    localStorage.removeItem("token");
-    localStorage.removeItem("username");
-  }
-  },[])
 
   useEffect(() => {
     setUserLogin(userData !== null && userData.username !== "" && userData.token !== "");

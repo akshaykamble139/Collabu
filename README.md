@@ -76,7 +76,11 @@ The Code Collaboration Platform is a portfolio project designed to simulate a Gi
 
 ---
 
-#### **Current Version:** v0.26
+#### **Current Version:** v0.27
+
+New api endpoint added to get tree structure of files in given repository, user data in redux is now persisted. New file added to handle root directory details exclusively and websocket configured for future use.
+
+#### v0.26
 
 Api endpoint for fetching files data using file path modified to handle edge cases like filename with no extension and searching for given folder as folders are not directly stored in db. New file TreeStructure added to give project structure view of current location and routes modified to have all repository code related pages linked to RepositoryPage.
 

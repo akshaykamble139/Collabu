@@ -39,7 +39,9 @@ const apiService = {
         instance.post('/stars/status', {ownerUsername, repositoryName}),
     fetchFileContent: (username, repoName, branchName, filePath) =>
         instance.get(`/files/${username}/${repoName}/${branchName}/${filePath}`, {responseType: 'blob'}),
-
+    fetchTreeStructureOfFiles: (username, repoName, branchName, folderPath) =>
+        instance.get(`/files/${username}/${repoName}/${branchName}/tree${folderPath}`),
+      
     toggleStar: (ownerUsername, repositoryName) => 
         instance.post('/stars/toggle', {ownerUsername, repositoryName}),
     forkRepository: (repositoryId, name) => 

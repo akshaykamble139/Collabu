@@ -12,12 +12,14 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.akshay.Collabu.dto.FileDTO;
+import com.akshay.Collabu.dto.TreeNode;
 import com.akshay.Collabu.services.FileService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -83,6 +85,41 @@ public class FileController {
             // If the path has a file name, retrieve file content
             return fileService.getFileByPath(username, repoName, branchName, filepath, userDetails);
         }
+    }
+    
+    @GetMapping("/{username}/{repoName}/{branchName}/tree/**")
+    public ResponseEntity<TreeNode> getFileTree(
+    		@PathVariable String username,
+            @PathVariable String repoName,
+            @PathVariable String branchName,
+            HttpServletRequest request,
+            @RequestParam(defaultValue = "false") boolean onlyCurrentFolder,
+            @AuthenticationPrincipal UserDetails userDetails
+        ) {
+        String currentPath = request.getRequestURI().split("/tree/", 2)[1];
+
+        if (currentPath == null) {
+            currentPath = "/";
+        }
+        else {
+        	if (!currentPath.startsWith("/")) {
+        		currentPath = "/" + currentPath;
+        	}
+        	if (!currentPath.endsWith("/")) {
+        		currentPath += "/";
+        	}
+        }
+
+        TreeNode tree;
+        if (onlyCurrentFolder) {
+            // Get only the current folder's structure
+            tree = fileService.buildTreeForCurrentFolder(username, repoName, branchName, currentPath, userDetails);
+        } else {
+            // Get tree from root to the current path
+            tree = fileService.buildTreeToPath(username, repoName, branchName, currentPath, userDetails);
+        }
+
+        return ResponseEntity.ok(tree);
     }
 
 }

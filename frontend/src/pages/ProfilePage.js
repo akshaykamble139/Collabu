@@ -45,8 +45,6 @@ const ProfilePage = () => {
     try {
       await apiService.changePassword(password);
       dispatch(showNotification({ message: "Password updated. Please login again.", type: "success" }));
-      localStorage.removeItem("token");
-      localStorage.removeItem("username");
       setTimeout(() => {
         dispatch(logout());
         navigate("/login");
@@ -90,8 +88,6 @@ const ProfilePage = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("username");
     dispatch(logout());
     navigate("/login");
   };

@@ -48,9 +48,6 @@ const LoginPage = () => {
       const response = await apiService.login(form);
       const token = response.data;
 
-      localStorage.setItem("token", token);  
-      localStorage.setItem("username", form.username); 
-
       dispatch(setUser({ username: form.username, token }));
       dispatch(showNotification({ message: "Login successful!", type: "success" }));
 

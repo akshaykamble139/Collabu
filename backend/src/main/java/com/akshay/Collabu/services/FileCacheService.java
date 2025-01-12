@@ -241,9 +241,6 @@ public class FileCacheService {
             fileDTOs.add(folderDTO);
         }
 
-        if (fileDTOs.isEmpty()) {
-        	throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Files not found");
-        }
         return fileDTOs;
 	}
 	

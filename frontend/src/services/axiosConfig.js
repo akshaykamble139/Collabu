@@ -1,6 +1,7 @@
 import axios from "axios";
 import { store } from "../redux/store";
 import { showNotification } from "../redux/notificationSlice";
+import { logout } from "../redux/userSlice";
 
 const instance = axios.create({
   baseURL: "http://localhost:8080/collabu",
@@ -8,9 +9,9 @@ const instance = axios.create({
 
 // Request Interceptor (Attach Token)
 instance.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const user = store.getState().user;
+  if (user.token) {
+    config.headers.Authorization = `Bearer ${user.token}`;
   }
   return config;
 }, (error) => {
@@ -38,8 +39,7 @@ instance.interceptors.response.use((response) => {
           message: "Session expired. Please login again.",
           type: "error",
         }));
-        localStorage.removeItem("token");
-        localStorage.removeItem("username");
+        store.dispatch(logout())
         setTimeout(() => {
           window.location.href = "/login";  // Redirect to login page        
         }, 3000);
