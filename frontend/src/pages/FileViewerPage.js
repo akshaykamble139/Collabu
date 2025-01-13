@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Box, Typography, CircularProgress, Paper, Button, Avatar } from '@mui/material';
 import apiService from '../services/apiService';
+import { useSelector } from 'react-redux';
 
 const FileViewerPage = () => {
-  const { username, repoName, branchName = 'main' } = useParams();
+  const navigation = useSelector(state => state.navigation)
+
   const location = useLocation();
-  const [filePath, setFilePath] = useState(window.location.pathname.split("/blob/" + branchName + "/")[1]);
+  const [filePath, setFilePath] = useState(window.location.pathname.split("/blob/" + navigation.repoBranchName + "/")[1]);
   const [fileData, setFileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -21,7 +23,7 @@ const FileViewerPage = () => {
   useEffect(() => {
     const fetchFileContent = async () => {
       try {
-        const response = await apiService.fetchFileContent(username, repoName, branchName, filePath, {
+        const response = await apiService.fetchFileContent(navigation.repoUsername, navigation.repoName, navigation.repoBranchName, filePath, {
           responseType: 'blob', // Treat the response as a Blob
         });
 
@@ -75,7 +77,7 @@ const FileViewerPage = () => {
       }
     };
 
-    if (username && repoName && branchName && filePath) {
+    if (navigation.repoUsername && navigation.repoName && navigation.repoBranchName && filePath) {
       fetchFileContent();
     }
 
@@ -85,7 +87,7 @@ const FileViewerPage = () => {
         URL.revokeObjectURL(fileData.downloadUrl);
       }
     };
-  }, [username, repoName, branchName, location.pathname]);
+  }, [navigation.repoUsername, navigation.repoName, navigation.repoBranchName, filePath, location.pathname]);
 
   if (loading) return <CircularProgress />;
   if (error) return <Typography color="error">{error}</Typography>;

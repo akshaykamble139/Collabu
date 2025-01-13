@@ -5,6 +5,7 @@ import repositoryStructureReducer from "./repositoryStructureSlice";
 import { persistStore, persistReducer } from 'redux-persist';
 import webSocketMiddleware from "./webSocketMiddleware";
 import localforage from "localforage";
+import navigationReducer from "./navigationSlice";
 
 // Persist configuration for user and repository structure
 const userPersistConfig = {
@@ -31,6 +32,7 @@ export const store = configureStore({
     user: persistedUserReducer,
     notification: notificationReducer,
     repositoryStructure: repositoryStructureReducer,
+    navigation: navigationReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -3,63 +3,30 @@ import { Code, GitBranch, GitFork, Star, File, Folder } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useConfirmationDialog } from "../globalComponents/ConfirmationDialogContext";
-import { showNotification } from "../redux/notificationSlice";
-import apiService from "../services/apiService";
-import ForkRepositoryForm from "../globalComponents/forms/ForkRepositoryForm";
+import { useConfirmationDialog } from "../../globalComponents/ConfirmationDialogContext";
+import { showNotification } from "../../redux/notificationSlice";
+import apiService from "../../services/apiService";
+import ForkRepositoryForm from "../../globalComponents/forms/ForkRepositoryForm";
 
-const RepositoryRootDirectory = ({propFilePath, propRepo, setCurrentBranch, openCreateFileDialog, branches}) => {
+const RepositoryRootDirectory = ({propRepo, setCurrentBranch, openCreateFileDialog, branches}) => {
     const [repo, setRepo] = useState(propRepo);
-    const [filePath, setFilePath] = useState(propFilePath);
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const [files, setFiles] = useState([]);
     const userData = useSelector(state => state.user);
     const location = useLocation();
-    const [username, setUsername] = useState("");
-    const [repoName, setRepoName] = useState("");
-    const [branchName, setBranchName] = useState("main");
+    const navigation = useSelector(state => state.navigation)
     const [isStarred, setIsStarred] = useState(false);
     const { showDialog, hideDialog } = useConfirmationDialog();
-    const repositoryStructure = useSelector((state) => state.repositoryStructure[username]?.[repoName]?.[branchName]);
-
-    useEffect(() => {
-        const path = location.pathname
-
-        if (path.includes("blob")) {
-            const first = path.split("/blob/");
-            const values = first[0].split("/");
-            setUsername(values[1]);
-            setRepoName(values[2]);
-            const suffix = first[1].split("/");
-            setBranchName(suffix[0]);
-            setFilePath("/" + suffix.slice(1,suffix.length).join("/"));
-        }
-        else if (!(path.includes("tree"))) {
-            const values = path.split("/");
-            setUsername(values[1]);
-            setRepoName(values[2]);
-            setFilePath("/");
-        }
-        else if (path.includes("tree")) {
-            const first = path.split("/tree/");
-            const values = first[0].split("/");
-            setUsername(values[1]);
-            setRepoName(values[2]);
-            const suffix = first[1].split("/");
-            setBranchName(suffix[0]);
-            setFilePath("/" + suffix.slice(1,suffix.length).join("/"));
-        }
-    },[location.pathname])
 
     useEffect(() => {
         const fetchRepo = async () => {
             try {   
-                    if (username && repoName && branchName && !location.pathname.includes("blob") && filePath === "/") {
-                        const filesResponse = await apiService.fetchTreeStructureOfFiles(username, repoName, branchName, filePath);
+                    if (navigation.repoUsername && navigation.repoName && navigation.repoBranchName && !location.pathname.includes("blob") && navigation.currentPath === "/") {
+                        const filesResponse = await apiService.fetchTreeStructureOfFiles(navigation.repoUsername, navigation.repoName, navigation.repoBranchName, navigation.currentPath);
                         setFiles(filesResponse.data?.children);
 
-                        const starResponse = await apiService.fetchStarStatus(username, repoName);
+                        const starResponse = await apiService.fetchStarStatus(navigation.repoUsername, navigation.repoName);
                         setIsStarred(starResponse.data.isActive)
                     }
             
@@ -67,15 +34,15 @@ const RepositoryRootDirectory = ({propFilePath, propRepo, setCurrentBranch, open
                 navigate('/error', { state: { code: err?.response?.code ? err.response.code : 404 } });
             }
         };
-        if (username && repoName && branchName) {
+        if (navigation.repoUsername && navigation.repoName && navigation.repoBranchName) {
             fetchRepo();
         }
-    }, [username, repoName, branchName, filePath, location.pathname]);
+    }, [navigation.repoUsername, navigation.repoName, navigation.repoBranchName, navigation.currentPath, location.pathname]);
 
 
     const handleToggleStar = async () => {
         try {
-            const response = await apiService.toggleStar(username, repoName);
+            const response = await apiService.toggleStar(navigation.repoUsername, navigation.repoName);
             setIsStarred(response.data === "Starred");
             setRepo(prev => ({ ...prev, starsCount: isStarred ? prev.starsCount - 1 : prev.starsCount + 1 }));
             dispatch(showNotification({
@@ -109,14 +76,14 @@ const RepositoryRootDirectory = ({propFilePath, propRepo, setCurrentBranch, open
             setRepo(prev => ({ ...prev, forksCount: prev.forksCount + 1 }));
             dispatch(showNotification({ type: 'success', message: 'Repository forked successfully!' }));
             hideDialog()
-            navigate(`/${username}/repositories`);
+            navigate(`/${navigation.repoUsername}/repositories`);
         } catch (err) {
             dispatch(showNotification({ type: 'error', message: err?.response?.data?.message || 'Failed to fork repository.' }));
         }
     };
 
     const openForkDialog = () => {
-        let newName = repoName;
+        let newName = navigation.repoName;
     
         const handleNameChange = (name) => {
           newName = name;
@@ -137,7 +104,7 @@ const RepositoryRootDirectory = ({propFilePath, propRepo, setCurrentBranch, open
     
     return (
         <>
-        {filePath === "/" && !location.pathname.includes("blob") && repo && branches.length > 0 && 
+        {navigation.currentPath === "/" && !location.pathname.includes("blob") && repo && branches.length > 0 && 
 
         <Paper sx={{ px: 2, py: 1 }}>
             
@@ -175,7 +142,7 @@ const RepositoryRootDirectory = ({propFilePath, propRepo, setCurrentBranch, open
                     <Typography variant="body2"><GitFork size={16} /> {repo.forkCount} Forks</Typography>
                     <Button
                     variant={repo.isForked ? 'contained' : 'outlined'}
-                    disabled={userData?.username === username}
+                    disabled={userData?.username === navigation.repoUsername}
                     startIcon={<GitFork />}
                     size="small"
                     onClick={openForkDialog}
@@ -197,7 +164,7 @@ const RepositoryRootDirectory = ({propFilePath, propRepo, setCurrentBranch, open
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                 <FormControl sx={{ minWidth: 120 }}>
                 <Select
-                    value={branchName}
+                    value={navigation.repoBranchName}
                     onChange={setCurrentBranch}
                 >
                     {branches.map((branch) => (
@@ -209,7 +176,7 @@ const RepositoryRootDirectory = ({propFilePath, propRepo, setCurrentBranch, open
                 <IconButton
                     size="small"
                 >
-                    <Link to={`/${username}/${repoName}/branches`}
+                    <Link to={`/${navigation.repoUsername}/${navigation.repoName}/branches`}
                         style={{ textDecoration: 'none', color: 'inherit' }}>
                         <GitBranch size={24} />
                         <Typography variant="caption" sx={{ ml: 0.5 }}>
@@ -219,7 +186,7 @@ const RepositoryRootDirectory = ({propFilePath, propRepo, setCurrentBranch, open
                 </IconButton>
                 </Box>
 
-                {userData?.username === username &&
+                {userData?.username === navigation.repoUsername &&
                 <Button variant="contained" component="label" onClick={openCreateFileDialog}>
                     Add File
                 </Button>}
@@ -229,8 +196,8 @@ const RepositoryRootDirectory = ({propFilePath, propRepo, setCurrentBranch, open
                 {files.map((file) => (
                     <ListItem key={file.id} >
                         <Link to={file.type === "folder" ? 
-                        `/${username}/${repoName}/tree/${branchName}${file.path}${file.name}`
-                        : `/${username}/${repoName}/blob/${branchName}${file.path}${file.name}`}
+                        `/${navigation.repoUsername}/${navigation.repoName}/tree/${navigation.repoBranchName}${file.path}${file.name}`
+                        : `/${navigation.repoUsername}/${navigation.repoName}/blob/${navigation.repoBranchName}${file.path}${file.name}`}
                             style={{ textDecoration: 'none', color: 'inherit' }}>
                             <ListItemText
                                 primary={

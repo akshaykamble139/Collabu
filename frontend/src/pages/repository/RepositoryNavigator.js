@@ -1,18 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { setRepositoryStructure, updateFolderContents } from "../redux/repositoryStructureSlice";
-import apiService from "../services/apiService";
+import { setRepositoryStructure, updateFolderContents } from "../../redux/repositoryStructureSlice";
+import apiService from "../../services/apiService";
 import TreeStructure from "./TreeStructure";
 import { CircularProgress } from "@mui/material";
 
-const RepositoryNavigator = ({ username, repoName, branchName, filePath }) => {
+const RepositoryNavigator = () => {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
+  
+  const navigation = useSelector(state => state.navigation)
 
   // Access repository structure from Redux
   const repositoryStructure = useSelector(
     (state) =>
-      state.repositoryStructure[username]?.[repoName]?.[branchName]
+      state.repositoryStructure[navigation.repoUsername]?.[navigation.repoName]?.[navigation.repoBranchName]
   );
 
   // Fetch root folder structure on load
@@ -20,16 +22,16 @@ const RepositoryNavigator = ({ username, repoName, branchName, filePath }) => {
     const fetchRootStructure = async () => {
       try {
         const response = await apiService.fetchTreeStructureOfFiles(
-          username,
-          repoName,
-          branchName,
-          filePath
+          navigation.repoUsername,
+          navigation.repoName,
+          navigation.repoBranchName,
+          navigation.currentPath
         );
         dispatch(
           setRepositoryStructure({
-            username,
-            repoName,
-            branchName,
+            username: navigation.repoUsername,
+            repoName: navigation.repoName,
+            branchName: navigation.repoBranchName,
             structure: response.data,
           })
         );
@@ -42,32 +44,45 @@ const RepositoryNavigator = ({ username, repoName, branchName, filePath }) => {
     if (!repositoryStructure) {
       fetchRootStructure();
     }
-  }, [username, repoName, branchName, repositoryStructure, dispatch]);
+  }, [navigation.repoUsername, navigation.repoName, navigation.repoBranchName, repositoryStructure, dispatch]);
 
   // Handle folder navigation
   const handleFolderClick = async (folderPath) => {
-    const folder = repositoryStructure?.children.find(
-      (child) => child.path === folderPath
-    );
+    let folder; 
+
+      if (repositoryStructure) {
+        let currentFolder = repositoryStructure;
+        if (folderPath !== "/") {
+          const folders = folderPath.split("/").slice(1);
+          folders.forEach((folder) => {
+            currentFolder = currentFolder.children.find((child) => child.name === folder);
+          });
+        }
+        folder = currentFolder;
+      }
 
     // Check if the folder is already loaded
-    if (!folder?.children) {
+    if (folder?.children && folder.children.length == 0) {
       try {
-        const response = await apiService.fetchFolderContents(
-          username,
-          repoName,
-          branchName,
+        const response = await apiService.fetchTreeStructureOfCurrentFolder(
+          navigation.repoUsername,
+          navigation.repoName,
+          navigation.repoBranchName,
           folderPath
         );
-        dispatch(
-          updateFolderContents({
-            username,
-            repoName,
-            branchName,
-            path: folderPath,
-            contents: response.data,
-          })
-        );
+
+        if (response?.data?.children) {
+          dispatch(
+            updateFolderContents({
+              username: navigation.repoUsername,
+              repoName: navigation.repoName,
+              branchName: navigation.repoBranchName,
+              path: folderPath,
+              contents: response.data?.children,
+            })
+          
+          );
+        }
       } catch (error) {
         console.error("Error fetching folder contents:", error);
       }
@@ -81,10 +96,11 @@ const RepositoryNavigator = ({ username, repoName, branchName, filePath }) => {
     return (
         <TreeStructure 
         files={structure.children} 
-        username={username} 
-        repoName={repoName} 
-        branchName={branchName} 
+        username={navigation.repoUsername} 
+        repoName={navigation.repoName} 
+        branchName={navigation.repoBranchName} 
         handleFolderClick={handleFolderClick}
+        filePath={navigation.currentPath}
         />
 
     //   <ul>

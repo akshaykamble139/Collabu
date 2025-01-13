@@ -16,7 +16,7 @@ const repositoryStructureSlice = createSlice({
       if (branchStructure) {
         let currentFolder = branchStructure;
         if (path !== "/") {
-          const folders = path.split("/");
+          const folders = path.split("/").slice(1);
           folders.forEach((folder) => {
             currentFolder = currentFolder.children.find((child) => child.name === folder);
           });

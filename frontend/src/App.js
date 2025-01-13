@@ -4,16 +4,17 @@ import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
 import RegisterPage from "./pages/RegisterPage";
 import ProfilePage from "./pages/ProfilePage";
-import RepositoriesPage from "./pages/RepositoriesPage";
+import RepositoriesPage from "./pages/repository/RepositoriesPage";
 import ErrorPage from "./pages/ErrorPage";
 import { useSelector } from "react-redux";
 import Header from "./globalComponents/Header";
-import RepositoryPage from "./pages/RepositoryPage";
+import RepositoryPage from "./pages/repository/RepositoryPage";
 import GlobalNotification from "./globalComponents/GlobalNotification";
 import ReactivateAccount from "./pages/ReactivateAccount";
 import BranchesPage from "./pages/BranchesPage";
 import ConfirmationDialog from "./globalComponents/ConfirmationDialog";
 import { ConfirmationDialogProvider } from "./globalComponents/ConfirmationDialogContext";
+import NavigationHandler from "./globalComponents/NavigationHandler";
 
 const App = () => {
   const userData = useSelector(state => state.user);
@@ -26,6 +27,7 @@ const App = () => {
   return (
     <Router>
       <ConfirmationDialogProvider>
+      <NavigationHandler />
       <Header isUserLoggedIn={isUserLoggedIn} username={userData?.username} />
       <GlobalNotification />  
       <ConfirmationDialog />

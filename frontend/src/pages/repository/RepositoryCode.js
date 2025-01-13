@@ -3,77 +3,49 @@ import { Code, GitBranch, GitFork, Star, Trash, File, Folder, ListIcon } from "l
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { showNotification } from "../redux/notificationSlice";
-import apiService from "../services/apiService";
-import { useConfirmationDialog } from "../globalComponents/ConfirmationDialogContext";
-import AddFileForm from "../globalComponents/forms/AddFileForm";
-import FileViewerPage from "./FileViewerPage";
+import { showNotification } from "../../redux/notificationSlice";
+import apiService from "../../services/apiService";
+import { useConfirmationDialog } from "../../globalComponents/ConfirmationDialogContext";
+import AddFileForm from "../../globalComponents/forms/AddFileForm";
+import FileViewerPage from "../FileViewerPage";
 import RepositoryNavigator from "./RepositoryNavigator";
 import RepositoryRootDirectory from "./RepositoryRootDirectory";
+import { updateFolderContents } from "../../redux/repositoryStructureSlice";
 
 const RepositoryCode = ({propRepo, propFilePath}) => {
     
+    const navigation = useSelector(state => state.navigation)
+    
     const repo = useState(propRepo);
-    const [filePath, setFilePath] = useState(propFilePath);
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const [branches, setBranches] = useState([]);
     const [files, setFiles] = useState([]);
     const location = useLocation();
-    const [username, setUsername] = useState("");
-    const [repoName, setRepoName] = useState("");
-    const [branchName, setBranchName] = useState("main");
     const { showDialog, hideDialog } = useConfirmationDialog();
-    const repositoryStructure = useSelector((state) => state.repositoryStructure[username]?.[repoName]?.[branchName]);
-    useEffect(() => {
-        const path = location.pathname
-
-        if (path.includes("blob")) {
-            const first = path.split("/blob/");
-            const values = first[0].split("/");
-            setUsername(values[1]);
-            setRepoName(values[2]);
-            const suffix = first[1].split("/");
-            setBranchName(suffix[0]);
-            setFilePath("/" + suffix.slice(1,suffix.length).join("/"));
-        }
-        else if (!(path.includes("tree"))) {
-            const values = path.split("/");
-            setUsername(values[1]);
-            setRepoName(values[2]);
-            setFilePath("/");
-        }
-        else if (path.includes("tree")) {
-            const first = path.split("/tree/");
-            const values = first[0].split("/");
-            setUsername(values[1]);
-            setRepoName(values[2]);
-            const suffix = first[1].split("/");
-            setBranchName(suffix[0]);
-            setFilePath("/" + suffix.slice(1,suffix.length).join("/"));
-        }
-    }, [location.pathname])
+    const repositoryStructure = useSelector((state) => state.repositoryStructure[navigation.repoUsername]?.[navigation.repoName]?.[navigation.repoBranchName]);
 
     useEffect(() => {
         const fetchRepo = async () => {
             try {
-                    const branchesResponse = await apiService.fetchBranches(username, repoName);
+                    const branchesResponse = await apiService.fetchBranches(navigation.repoUsername, navigation.repoName);
                     setBranches(branchesResponse.data);
             
             } catch (err) {
                 navigate('/error', { state: { code: err?.response?.code ? err.response.code : 404 } });
             }
         };
-        if (username && repoName && branchName) {
+        if (navigation.repoUsername && navigation.repoName) {
             fetchRepo();
         }
-    }, [username, repoName, branchName, filePath, location.pathname]);
+    }, [navigation.repoUsername, navigation.repoName]);
 
     useEffect(() => {
         const fetchFiles = async () => {
             try {
-                if (username && repoName && branchName && !location.pathname.includes("blob") && filePath !== "/" && repositoryStructure.name === "/") {
-                    const pathArr = filePath.split("/");
+                if (navigation.repoUsername && navigation.repoName && navigation.repoBranchName && repositoryStructure 
+                    && !location.pathname.includes("blob") && navigation.currentPath !== "/" && repositoryStructure.name === "/") {
+                    const pathArr = navigation.currentPath.split("/");
                     let hasData = false;
                     let data = repositoryStructure.children;
 
@@ -97,16 +69,42 @@ const RepositoryCode = ({propRepo, propFilePath}) => {
                         console.log(data)
                         setFiles(data);
                     }
+                    else {
+                        try {
+                                const response = await apiService.fetchTreeStructureOfCurrentFolder(
+                                    navigation.repoUsername,
+                                    navigation.repoName,
+                                    navigation.repoBranchName,
+                                    !navigation.currentPath.endsWith("/") ? navigation.currentPath + "/" : navigation.currentPath
+                                );
+                        
+                                if (response?.data?.children) {
+                                    setFiles(response.data.children)
+                                    dispatch(
+                                        updateFolderContents({
+                                        username: navigation.repoUsername,
+                                        repoName: navigation.repoName,
+                                        branchName: navigation.repoBranchName,
+                                        path: !navigation.currentPath.endsWith("/") ? navigation.currentPath + "/" : navigation.currentPath,
+                                        contents: response.data?.children,
+                                        })
+                                    );
+                                }
+                        } catch (error) {
+                            console.error("Error fetching folder contents:", error);
+                        }
+                                                   
+                    }
                 }
             
             } catch (err) {
                 navigate('/error', { state: { code: err?.response?.code ? err.response.code : 404 } });
             }
         };
-        if (username && repoName && branchName) {
+        if (navigation.repoUsername && navigation.repoName && navigation.repoBranchName) {
             fetchFiles();
         }
-    }, [username, repoName, branchName,repositoryStructure, location.pathname]);
+    }, [navigation.repoUsername, navigation.repoName, navigation.repoBranchName,repositoryStructure, navigation.currentPath, location.pathname]);
 
     const handleDeleteBranch = async (branchId) => {
         try {
@@ -150,8 +148,8 @@ const RepositoryCode = ({propRepo, propFilePath}) => {
         const filePath = arr.slice(0,arr.length-1).join('/');
         const fileDTO = {
             'name': arr[arr.length-1],
-            'repositoryName': repoName,
-            'branchName': branchName,
+            'repositoryName': navigation.repoName,
+            'branchName': navigation.repoBranchName,
             'commitMessage': commitMessage,
             'path': propFilePath + filePath,
         }
@@ -211,48 +209,45 @@ const RepositoryCode = ({propRepo, propFilePath}) => {
     
     const setCurrentBranch = (event) => {
         const newBranch = event.target.value;
-        if (newBranch !== branchName) {
-            navigate(`/${username}/${repoName}/tree/${newBranch}`);
+        if (newBranch !== navigation.repoBranchName) {
+            navigate(`/${navigation.repoUsername}/${navigation.repoName}/tree/${newBranch}`);
         }
     }
         
     return (
         <>
-            <RepositoryRootDirectory p
-                ropFilePath={propFilePath} 
+        <div className="flex flex-col h-full">
+            <RepositoryRootDirectory 
+                propFilePath={propFilePath} 
                 propRepo={propRepo} 
                 setCurrentBranch={setCurrentBranch} 
                 openCreateFileDialog={openCreateFileDialog}
                 branches={branches}
             />
-            {(filePath !== "/" || location.pathname.includes("blob")) && repo && branches.length > 0 && (
-                <div className="repo-container">
+            {(navigation.currentPath !== "/" || location.pathname.includes("blob")) && repo && branches.length > 0 && (
+            <div className="repo-container flex-grow">
                 <Box sx={{ flexGrow: 1 }}>
                     <Breadcrumbs>
-                        <Link to={`/${username}/repositories`} 
+                        <Link to={`/${navigation.repoUsername}/repositories`} 
                         style={{ textDecoration: 'none', color: 'inherit' }}>
-                        {username}
+                        {navigation.repoUsername}
                         </Link>
-                        <Typography color="text.primary">{repoName}</Typography>
+                        <Typography color="text.primary">{navigation.repoName}</Typography>
                     </Breadcrumbs>     
                 </Box>
-                <Box sx={{ display: 'flex', flexGrow: 1 }}>
-                <div className="tree-panel">
-                <RepositoryNavigator username={username} repoName={repoName} branchName={branchName} filePath={filePath}/>
-                {/* <TreeStructure files={files} username={username} repoName={repoName} branchName={branchName} /> */}
-                </div>
+                <Box sx={{ display: 'flex', flexGrow: 1, width: '100%' }}>
+                <RepositoryNavigator />
 
-                <div className="content-panel">
-                {location.pathname.includes("tree") && filePath !== "/" ? 
-                <Paper>
-                    <Divider sx={{mb:2}}/>
+                {location.pathname.includes("tree") && navigation.currentPath !== "/" ? 
+                <Paper sx={{ flexGrow: 1, p: 2, width: '100%' }}>
+                    {/* <Divider sx={{mb:2}}/> */}
                     {files.length > 0 &&
                     <List>
                     {files.map((file) => (
                         <ListItem key={file.id}>
                             <Link to={file.type === "folder" ? 
-                            `/${username}/${repoName}/tree/${branchName}${file.path}${file.name}`
-                            : `/${username}/${repoName}/blob/${branchName}${file.path}${file.name}`}
+                            `/${navigation.repoUsername}/${navigation.repoName}/tree/${navigation.repoBranchName}${file.path}${file.name}`
+                            : `/${navigation.repoUsername}/${navigation.repoName}/blob/${navigation.repoBranchName}${file.path}${file.name}`}
                                 style={{ textDecoration: 'none', color: 'inherit' }}>
                                 <ListItemText
                                     primary={
@@ -272,14 +267,14 @@ const RepositoryCode = ({propRepo, propFilePath}) => {
                 location.pathname.includes("blob") && 
                 <>
                     <FileViewerPage 
-                        username={username}
-                        repoName={repoName}
-                        branchName={branchName}
+                        username={navigation.repoUsername}
+                        repoName={navigation.repoName}
+                        branchName={navigation.repoBranchName}
                     />
                 </> }
-                </div>
                 </Box>
             </div>)}
+            </div>
         </>
     );
 };

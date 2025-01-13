@@ -1,0 +1,18 @@
+export const iconColor = {
+    js: 'text-yellow-600',
+    jsx: 'text-blue-500',
+    ts: 'text-blue-600',
+    tsx: 'text-blue-500',
+    css: 'text-purple-500',
+    html: 'text-orange-500',
+    json: 'text-yellow-500',
+    md: 'text-gray-600',
+    py: 'text-green-500',
+    rb: 'text-red-500',
+    pdf: 'text-red-600',
+    jpg: 'text-pink-500',
+    jpeg: 'text-pink-500',
+    png: 'text-pink-500',
+    gif: 'text-pink-500',
+    svg: 'text-orange-400',
+  };

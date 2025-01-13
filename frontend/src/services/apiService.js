@@ -41,7 +41,10 @@ const apiService = {
         instance.get(`/files/${username}/${repoName}/${branchName}/${filePath}`, {responseType: 'blob'}),
     fetchTreeStructureOfFiles: (username, repoName, branchName, folderPath) =>
         instance.get(`/files/${username}/${repoName}/${branchName}/tree${folderPath}`),
-      
+    fetchTreeStructureOfCurrentFolder: (username, repoName, branchName, folderPath) =>
+        instance.get(`/files/${username}/${repoName}/${branchName}/tree${folderPath}?onlyCurrentFolder=true`),
+
+    
     toggleStar: (ownerUsername, repositoryName) => 
         instance.post('/stars/toggle', {ownerUsername, repositoryName}),
     forkRepository: (repositoryId, name) => 

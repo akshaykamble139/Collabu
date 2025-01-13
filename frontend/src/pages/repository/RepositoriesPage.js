@@ -13,13 +13,12 @@ import {
   Chip,
 } from '@mui/material';
 import { Search, Star, GitFork, Code } from 'lucide-react';
-import { showNotification } from '../redux/notificationSlice';
-import apiService from '../services/apiService';
-import CreateRepositoryForm from '../globalComponents/forms/CreateRepositoryForm';
-import { useConfirmationDialog } from '../globalComponents/ConfirmationDialogContext';
+import { showNotification } from '../../redux/notificationSlice';
+import apiService from '../../services/apiService';
+import CreateRepositoryForm from '../../globalComponents/forms/CreateRepositoryForm';
+import { useConfirmationDialog } from '../../globalComponents/ConfirmationDialogContext';
 
 const RepositoriesPage = () => {
-  const { username } = useParams();
   const { showDialog, hideDialog } = useConfirmationDialog();
   const [repos, setRepos] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,10 +27,10 @@ const RepositoriesPage = () => {
   const dispatch = useDispatch();
   const userData = useSelector(state => state.user);
   const [loading, setLoading] = useState(false);  // Track loading state
-
-  const fetchRepos = async (userName) => {
+  const navigation = useSelector(state => state.navigation)
+  const fetchRepos = async () => {
     try {
-      const response = await apiService.fetchAllRepositories(userName);
+      const response = await apiService.fetchAllRepositories(navigation.repoUsername);
       setRepos(response.data);
     } catch (err) {
       dispatch(showNotification({ message: "Failed to fetch repositories.", type: "error" }));
@@ -40,18 +39,13 @@ const RepositoriesPage = () => {
 
   useEffect(() => {
     // Fetch repositories only if not already loading or fetched
-    if (!username && userData?.username && !loading) {
+    if (navigation.repoUsername && !loading) {
       setLoading(true);  // Set loading to true before fetch
-      fetchRepos(userData.username).finally(() => {
+      fetchRepos().finally(() => {
         setLoading(false);  // Reset loading after fetch
       });
-    } else if (username && !loading) {
-      setLoading(true);
-      fetchRepos(username).finally(() => {
-        setLoading(false);
-      });
     }
-  }, [username, userData?.username]);
+  }, [navigation.repoUsername]);
 
   const validateRepositoryForm = (newRepo) => {
     let error = "";
@@ -73,7 +67,7 @@ const RepositoriesPage = () => {
     const handleCurrentNewRepoChange = (repo) => {
       currentNewRepo = repo;
     }
-    if (userData?.username === username){
+    if (userData?.username === navigation.repoUsername){
       showDialog({
           title: "Create a new repository",
           message: (
@@ -89,7 +83,7 @@ const RepositoriesPage = () => {
   }
 
   const handleCreateRepo = async (newRepo) => {
-    if (userData?.username === username) {
+    if (userData?.username === navigation.repoUsername) {
       try {
         const error = validateRepositoryForm(newRepo);
 
@@ -119,9 +113,9 @@ const RepositoriesPage = () => {
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h4">
-          {username ? `${username}'s Repositories` : 'Your Repositories'}
+          {navigation.repoUsername ? `${navigation.repoUsername}'s Repositories` : 'Your Repositories'}
         </Typography>
-        {((username && userData?.username === username) || (!username)) && (
+        {((navigation.repoUsername && userData?.username === navigation.repoUsername) || (!navigation.repoUsername)) && (
           <Button
             variant="contained"
             color="primary"

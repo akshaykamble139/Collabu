@@ -76,7 +76,11 @@ The Code Collaboration Platform is a portfolio project designed to simulate a Gi
 
 ---
 
-#### **Current Version:** v0.27
+#### **Current Version:** v0.28
+
+New reducer added to handle navigation and page data based on the path url. Repository tree structure update and initialization integrated in frontend. Code refactored to organize the code and keep it clean.
+
+#### v0.27
 
 New api endpoint added to get tree structure of files in given repository, user data in redux is now persisted. New file added to handle root directory details exclusively and websocket configured for future use.
 
