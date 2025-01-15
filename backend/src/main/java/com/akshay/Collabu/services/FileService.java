@@ -1,5 +1,8 @@
 package com.akshay.Collabu.services;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -19,8 +22,11 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.akshay.Collabu.dto.FileDTO;
 import com.akshay.Collabu.dto.TreeNode;
+import com.akshay.Collabu.dto.UpdateFileRequestDTO;
+import com.akshay.Collabu.models.Branch;
 import com.akshay.Collabu.models.File;
 import com.akshay.Collabu.models.FileVersion;
+import com.akshay.Collabu.models.Repository_;
 import com.akshay.Collabu.repositories.FileContentsRepository;
 import com.akshay.Collabu.repositories.FileRepository;
 import com.akshay.Collabu.repositories.FileVersionRepository;
@@ -266,68 +272,6 @@ public class FileService {
                 mimeType.startsWith("font/"));
     }
 
-//	public TreeNode buildTreeToPath(String username, String repoName, String branchName, String currentPath,
-//			UserDetails userDetails) {
-//		Long repositoryId = cacheService.getRepositoryId(username + "-" + repoName);
-//
-//        if (repositoryId == null) {
-//            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Repository not found");
-//        }
-//        
-//		Boolean isPublic = cacheService.getRepositoryVisibility(repositoryId);
-//    	
-//    	if (!username.equals(userDetails.getUsername()) && !isPublic) {
-//    		throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Repository not found");
-//    	}
-//        
-//        Long branchId = cacheService.getBranchId(username + "-" + repoName + "-" + branchName);
-//
-//        if (branchId == null) {
-//        	throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found");
-//        }
-//                
-//        List<File> files = fileRepository.findByBranchId(branchId).stream()
-//                .filter(file -> file.getPath() != null && file.getPath().startsWith("/"))
-//                .collect(Collectors.toList());
-//        
-//        // Root node
-//        TreeNode root = new TreeNode("/", "folder");
-//
-//        // Build tree till the current path
-//        Map<String, TreeNode> nodeMap = new HashMap<>();
-//        nodeMap.put("/", root);
-//        
-//        int maxPathLength = currentPath.split("/").length;
-//
-//        for (File file : files) {
-//            String fullPath = file.getPath() + file.getName();
-//
-//            String[] parts = fullPath.split("/");
-//            StringBuilder currentPathBuilder = new StringBuilder("/");
-//            TreeNode parent = root;
-//
-//            for (int i = 1; i < parts.length; i++) {
-//                currentPathBuilder.append(parts[i]);
-//                String key = currentPathBuilder.toString();
-//
-//                if (!nodeMap.containsKey(key)) {
-//                    TreeNode newNode = (i == parts.length - 1 && "folder".equals(file.getType()))
-//                            ? new TreeNode(parts[i], "folder")
-//                            : new TreeNode(parts[i], "file");
-//
-//                    nodeMap.put(key, newNode);
-//                    parent.addChild(newNode);
-//                }
-//
-//                parent = nodeMap.get(key);
-//                currentPathBuilder.append("/");
-//            }
-//        }
-//
-//        return root;
-//
-//	}
-
 	public TreeNode buildTreeToPath(String username, String repoName, String branchName, String currentPath,
 			UserDetails userDetails) {
 		Long repositoryId = cacheService.getRepositoryId(username + "-" + repoName);
@@ -357,6 +301,9 @@ public class FileService {
 		        
 	        for(FileDTO fileDTO: fileDTOs){
 	        	TreeNode childNode = new TreeNode(fileDTO.getName(), fileDTO.getType(), fileDTO.getPath());
+	        	if (!childNode.getType().equals("folder")) {
+					childNode.setFileId(fileDTO.getId());
+				}
 				root.addChild(childNode);
 	        }
 			return root;
@@ -378,6 +325,9 @@ public class FileService {
 		        
 		        for(FileDTO fileDTO: fileDTOs){
 		        	TreeNode childNode = new TreeNode(fileDTO.getName(), fileDTO.getType(), fileDTO.getPath());
+		        	if (!childNode.getType().equals("folder")) {
+						childNode.setFileId(fileDTO.getId());
+					}
 					parentNode.addChild(childNode);
 		        }
 			}
@@ -416,9 +366,123 @@ public class FileService {
         
         fileDTOs.stream().forEach(fileDTO -> {
 			TreeNode childNode = new TreeNode(fileDTO.getName(), fileDTO.getType(), fileDTO.getPath());
+			if (!childNode.getType().equals("folder")) {
+				childNode.setFileId(fileDTO.getId());
+			}
 			root.addChild(childNode);
 		});
         
         return root;       
 	}
+
+	public ResponseEntity<?> updateFile(UpdateFileRequestDTO requestDTO, UserDetails userDetails) {		
+		Long fileId = requestDTO.getFileId();
+		String fileName = requestDTO.getFileName();
+		String filePath = requestDTO.getFilePath();
+		
+		File file = fileRepository.findById(fileId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found"));
+		
+
+		String oldFilePath = file.getPath();
+
+		Repository_ repository = file.getRepository();
+		Long repositoryId = repository.getId();
+		
+        String key = cacheService.getRepositoryKey(repositoryId);
+        
+        if (key == null) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Repository not found");        	
+        }
+		
+ 		String username = key.split("-")[0];
+		
+		if (!userDetails.getUsername().equals(username)) {
+        	throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found");
+		}
+		
+		List<FileVersion> fileVersions = fileVersionRepository.findByFileIdOrderByVersionNumberDesc(file.getId());
+        
+        if (fileVersions == null || fileVersions.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found");
+        }
+        
+        FileVersion lastFileVersion = fileVersions.get(0);
+		
+		Branch branch = file.getBranch();
+		Boolean updatableFileContents = isEditableMimeType(file.getMimeType());
+		
+		Boolean isFileNameChanged = false;
+		Boolean isFileContentsChanged = false;
+		
+		try {
+			String fileContents = requestDTO.getFileContent();
+	
+			
+			if (fileContents != null && !fileContents.isEmpty()) {
+				
+				if (!updatableFileContents) {
+					throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "File format not supoorted for editing");
+				}
+				
+				if (file.getSize() > SIZE_CUTOFF) {
+					throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "File size too large for editing");
+				}
+				
+				byte[] fileContentBytes = fileContents.getBytes(StandardCharsets.UTF_8);
+				
+				
+				String newHash = fileCacheService.computeSHA1Hash(fileContentBytes);
+				
+				if (!newHash.equals(lastFileVersion.getHash())) {
+					isFileContentsChanged = true;
+				}
+				
+			}
+			
+			if (!(fileName.equals(file.getName()) && filePath.equals(file.getPath()))) {
+				isFileNameChanged = true;
+				boolean fileExists = fileRepository.existsByNameAndPathAndBranchId(
+		                fileName, filePath, branch.getId()
+		        );
+		        if (fileExists) {
+		            throw new ResponseStatusException(HttpStatus.CONFLICT, "File already exists in this path.");
+		        }
+			}
+			
+			if (!isFileNameChanged && !isFileContentsChanged) {
+	        	throw new ResponseStatusException(HttpStatus.NOT_MODIFIED, "File not modified");
+			}
+			
+			file.setName(fileName);
+			file.setPath(filePath);
+			
+			if (fileName != null && fileName.contains(".")) {
+	            String extension = fileName.substring(fileName.lastIndexOf(".") + 1);
+	            file.setType(extension);
+	        }
+			
+			Boolean fileChangedSuccess = fileCacheService.updateFile(file, repository, branch, filePath, oldFilePath, requestDTO, lastFileVersion, isFileContentsChanged);
+			
+			if (fileChangedSuccess) {
+				return ResponseEntity.ok(fileName + " updated successfully!");
+			}
+		} catch (NoSuchAlgorithmException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+	    	throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error while computing hash");
+		} 
+    	throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error while updating file");
+	}
+	
+	private boolean isEditableMimeType(String mimeType) {
+        // Define editable MIME types
+        return mimeType != null && (
+            mimeType.startsWith("text/") ||
+            mimeType.equals("application/json") ||
+            mimeType.equals("application/xml") ||
+            mimeType.equals("application/javascript")
+        );
+    }
+
 }

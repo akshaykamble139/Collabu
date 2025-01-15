@@ -12,7 +12,7 @@ import RepositoryNavigator from "./RepositoryNavigator";
 import RepositoryRootDirectory from "./RepositoryRootDirectory";
 import { updateFolderContents } from "../../redux/repositoryStructureSlice";
 
-const RepositoryCode = ({propRepo, propFilePath}) => {
+const RepositoryCode = ({propRepo}) => {
     
     const navigation = useSelector(state => state.navigation)
     
@@ -56,9 +56,9 @@ const RepositoryCode = ({propRepo, propFilePath}) => {
                         const folderName = pathArr[index];
                         for (let j = 0; j < data.length; j++) {
                             const element = data[j];
-                            if (element.name == folderName && element.type === "folder") {
+                            if (element.name === folderName && element.type === "folder") {
                                 data = element.children;
-                                if (index == pathArr.length-1) {
+                                if (index === pathArr.length-1) {
                                     hasData = true;
                                 }
                             }
@@ -151,7 +151,7 @@ const RepositoryCode = ({propRepo, propFilePath}) => {
             'repositoryName': navigation.repoName,
             'branchName': navigation.repoBranchName,
             'commitMessage': commitMessage,
-            'path': propFilePath + filePath,
+            'path': navigation.currentPath + filePath,
         }
         formData.append('fileDTO', JSON.stringify(fileDTO));  // Serialize the fileDTO object
     
@@ -218,7 +218,6 @@ const RepositoryCode = ({propRepo, propFilePath}) => {
         <>
         <div className="flex flex-col h-full">
             <RepositoryRootDirectory 
-                propFilePath={propFilePath} 
                 propRepo={propRepo} 
                 setCurrentBranch={setCurrentBranch} 
                 openCreateFileDialog={openCreateFileDialog}

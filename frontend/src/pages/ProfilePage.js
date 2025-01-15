@@ -18,6 +18,12 @@ const ProfilePage = () => {
   const dispatch = useDispatch();
   const [selectedFile, setSelectedFile] = useState(null);  
 
+  const [isDarkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    document.body.className = isDarkMode ? 'dark-mode' : 'light-mode';
+  }, [isDarkMode]);
+
   useEffect(() => {
     if (!username && userData.username) {
       navigate(`/profile/${userData.username}`);
@@ -197,6 +203,9 @@ const ProfilePage = () => {
 
         {userData !== null && userData.username === username &&
           <Box sx={{ mt: 5, width: "100%" }}>
+            <Button variant="outlined" fullWidth onClick={() => {setDarkMode(!isDarkMode)}} sx={{ mt: 2 }}>
+              {isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            </Button>
             <Button variant="outlined" fullWidth onClick={handleLogout} sx={{ mt: 2 }}>Logout</Button>
             <Button variant="outlined" fullWidth onClick={() => openDialog("deactivate")} sx={{ mt: 2 }}>Deactivate Account</Button>
             <Button variant="contained" color="error" fullWidth onClick={() => openDialog("delete")} sx={{ mt: 2 }}>Delete Account</Button>

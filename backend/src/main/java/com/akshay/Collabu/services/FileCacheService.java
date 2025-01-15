@@ -1,6 +1,7 @@
 package com.akshay.Collabu.services;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
@@ -24,6 +25,9 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.akshay.Collabu.dto.FileDTO;
+import com.akshay.Collabu.dto.UpdateFileRequestDTO;
+import com.akshay.Collabu.models.ActivityAction;
+import com.akshay.Collabu.models.ActivityLog;
 import com.akshay.Collabu.models.Branch;
 import com.akshay.Collabu.models.Commit;
 import com.akshay.Collabu.models.File;
@@ -32,6 +36,7 @@ import com.akshay.Collabu.models.FileContentLocation;
 import com.akshay.Collabu.models.FileVersion;
 import com.akshay.Collabu.models.Repository_;
 import com.akshay.Collabu.models.User;
+import com.akshay.Collabu.repositories.ActivityLogRepository;
 import com.akshay.Collabu.repositories.BranchRepository;
 import com.akshay.Collabu.repositories.CommitRepository;
 import com.akshay.Collabu.repositories.FileContentsRepository;
@@ -59,6 +64,9 @@ public class FileCacheService {
     
     @Autowired
     private BranchRepository branchRepository;
+    
+    @Autowired
+    private ActivityLogRepository activityLogRepository;
     
     @Autowired
     private Environment environment;
@@ -96,7 +104,7 @@ public class FileCacheService {
         }
 
         try {
-            String hash = computeSHA1Hash(fileContents);
+            String hash = computeSHA1Hash(fileContents.getBytes());
 
             Optional<FileContent> existingContent = fileContentsRepository.findByHash(hash);
             FileContent fileContent;
@@ -133,8 +141,9 @@ public class FileCacheService {
             setFileMetadata(file, fileContents, fileContent);
             File savedFile = fileRepository.save(file);
 
-            Commit savedCommit = saveCommit(fileDTO, user, branch, repository, savedFile);
-            saveFileVersion(savedFile, hash, savedCommit, fileContents.getSize());
+            Commit savedCommit = saveCommit(fileDTO.getCommitMessage(), user, branch, repository, savedFile);
+            saveFileVersion(savedFile, hash, savedCommit, fileContents.getSize(), 1);
+            saveActivityLog(user, branch, repository, savedFile, ActivityAction.CREATE_FILE);
 
         } catch (IOException | NoSuchAlgorithmException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to process file");
@@ -180,23 +189,40 @@ public class FileCacheService {
     }
 
     // Saves commit information
-    private Commit saveCommit(FileDTO fileDTO, User user, Branch branch, Repository_ repository, File savedFile) {
+    private Commit saveCommit(String commitMessage, User user, Branch branch, Repository_ repository, File savedFile) {
         Commit commit = new Commit();
         commit.setBranch(branch);
         commit.setRepository(repository);
         commit.setTimestamp(savedFile.getLastModifiedAt());
-        commit.setMessage(fileDTO.getCommitMessage() == null ? "File upload" : fileDTO.getCommitMessage());
+        commit.setMessage(commitMessage == null ? "File upload" : commitMessage);
         commit.setUser(user);
-        return commitRepository.save(commit);
+        Commit savedCommit = commitRepository.save(commit);
+        
+        branch.setLastCommit(savedCommit);
+        branchRepository.save(branch);
+        
+        return savedCommit;
     }
 
+	// Log activity
+    private void saveActivityLog( User user, Branch branch, Repository_ repository, File file, ActivityAction action) {
+        ActivityLog log = new ActivityLog();
+        log.setAction(action);
+        log.setUserId(user.getId());
+        log.setRepositoryId(repository.getId());
+        log.setBranchId(branch.getId());
+        log.setFileId(file.getId());
+        log.setTimestamp(LocalDateTime.now());
+        activityLogRepository.save(log);
+	}
+
     // Saves file version after the commit
-    private void saveFileVersion(File file, String hash, Commit commit, long size) {
+    private void saveFileVersion(File file, String hash, Commit commit, long size, Integer versionNumber) {
         FileVersion fileVersion = new FileVersion();
         fileVersion.setFile(file);
         fileVersion.setHash(hash);
         fileVersion.setCreatedAt(file.getLastModifiedAt());
-        fileVersion.setVersionNumber(1);
+        fileVersion.setVersionNumber(versionNumber);
         fileVersion.setSize(size);
         fileVersion.setCommit(commit);
         fileVersionRepository.save(fileVersion);
@@ -243,10 +269,68 @@ public class FileCacheService {
 
         return fileDTOs;
 	}
+    
+    @Transactional
+    @Caching(evict = {
+	        @CacheEvict(value = "files", key = "#branch.getId() + '-' + #newFilePath"),
+	        @CacheEvict(value = "files", key = "#branch.getId() + '-' + #oldFilePath")
+	    })
+    public Boolean updateFile(File file, Repository_ repository, Branch branch, String newFilePath, String oldFilePath, UpdateFileRequestDTO requestDTO, FileVersion lastFileVersion, Boolean isFileContentsChanged) throws NoSuchAlgorithmException, IOException {
+        User user = repository.getOwner();
+
+        Integer latestVersion = lastFileVersion.getVersionNumber() + 1;
+        String hash = lastFileVersion.getHash();
+        
+        if (isFileContentsChanged) {
+        	byte[] fileContentBytes = requestDTO.getFileContent().getBytes(StandardCharsets.UTF_8);
+			
+			String newHash = computeSHA1Hash(fileContentBytes);
+			
+            Optional<FileContent> existingContent = fileContentsRepository.findByHash(newHash);
+            FileContent fileContent;
+
+            if (existingContent.isEmpty()) {
+                fileContent = new FileContent();
+
+                fileContent.setHash(newHash);
+                fileContent.setLocation(FileContentLocation.DB);
+
+                byte[] contentBytes = fileContentBytes;
+                fileContent.setContent(contentBytes);
+                fileContent = fileContentsRepository.save(fileContent);
+                
+                hash = newHash;
+            } else {
+                fileContent = existingContent.get();
+                
+                hash = fileContent.getHash();
+            }
+            
+            file.setSize((long) fileContentBytes.length);
+	            
+        }
+        
+        Long size = file.getSize();
+        
+        file.setLastModifiedAt(LocalDateTime.now());
+
+        File savedFile = fileRepository.save(file);
+        
+        if (requestDTO.getMessage() == null || requestDTO.getMessage().isEmpty()) {
+        	requestDTO.setMessage("Update " + file.getName());
+        }
+
+        Commit savedCommit = saveCommit(requestDTO.getMessage(), user, branch, repository, savedFile);
+        
+        saveFileVersion(savedFile, hash, savedCommit, size, latestVersion);
+        saveActivityLog(user, branch, repository, savedFile, ActivityAction.UPDATE_FILE);
+		
+		return true;
+	}
 	
-	public String computeSHA1Hash(MultipartFile file) throws IOException, NoSuchAlgorithmException {
+	public String computeSHA1Hash(byte[] fileContents) throws IOException, NoSuchAlgorithmException {
         MessageDigest digest = MessageDigest.getInstance("SHA-1");
-        byte[] hashBytes = digest.digest(file.getBytes());
+        byte[] hashBytes = digest.digest(fileContents);
         return Base64.getEncoder().encodeToString(hashBytes);
     }	
 }

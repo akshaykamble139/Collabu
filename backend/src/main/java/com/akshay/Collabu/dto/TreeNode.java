@@ -16,7 +16,8 @@ public class TreeNode implements Serializable{
     private String type; // "file" or "folder"
     private String path;
     private List<TreeNode> children;
-    
+    private Long fileId;
+
     public TreeNode(String name, String type, String path) {
     	this.id = UUID.randomUUID().toString();
         this.name = name;

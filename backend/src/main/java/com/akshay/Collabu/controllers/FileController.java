@@ -11,6 +11,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -20,11 +22,13 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.akshay.Collabu.dto.FileDTO;
 import com.akshay.Collabu.dto.TreeNode;
+import com.akshay.Collabu.dto.UpdateFileRequestDTO;
 import com.akshay.Collabu.services.FileService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/files")
@@ -120,6 +124,16 @@ public class FileController {
         }
 
         return ResponseEntity.ok(tree);
+    }
+    
+    @PutMapping("/update/{fileId}")
+    public ResponseEntity<?> updateFile(
+        @PathVariable Long fileId,
+        @RequestBody @Valid UpdateFileRequestDTO requestDTO,
+        @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        requestDTO.setFileId(fileId); 
+        return fileService.updateFile(requestDTO, userDetails);
     }
 
 }
