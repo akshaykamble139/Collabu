@@ -84,6 +84,10 @@ public class FileCacheService {
         resultDto.setType(file.getType());
         resultDto.setMimeType(file.getMimeType());
         
+        if (isEditableMimeType(file.getMimeType()) && file.getSize() <= SIZE_CUTOFF && file.getStorageUrl() == null) {
+        	resultDto.setIsEditable(true);
+        }
+        
         return resultDto;
 	}
 
@@ -333,4 +337,14 @@ public class FileCacheService {
         byte[] hashBytes = digest.digest(fileContents);
         return Base64.getEncoder().encodeToString(hashBytes);
     }	
+	
+	public boolean isEditableMimeType(String mimeType) {
+        // Define editable MIME types
+        return mimeType != null && (
+            mimeType.startsWith("text/") ||
+            mimeType.equals("application/json") ||
+            mimeType.equals("application/xml") ||
+            mimeType.equals("application/javascript")
+        );
+    }
 }

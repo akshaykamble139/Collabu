@@ -76,7 +76,15 @@ The Code Collaboration Platform is a portfolio project designed to simulate a Gi
 
 ---
 
-#### **Current Version:** v0.28
+#### **Current Version:** v0.30
+
+Changes made for hosting collabu on railway.
+
+#### v0.29
+
+New api endpoint added to update file name, path or contents for small sized text-based files. css added to switch between dark and light theme.
+
+#### v0.28
 
 New reducer added to handle navigation and page data based on the path url. Repository tree structure update and initialization integrated in frontend. Code refactored to organize the code and keep it clean.
 

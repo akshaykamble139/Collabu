@@ -231,7 +231,23 @@ const RepositoryCode = ({propRepo}) => {
                         style={{ textDecoration: 'none', color: 'inherit' }}>
                         {navigation.repoUsername}
                         </Link>
-                        <Typography color="text.primary">{navigation.repoName}</Typography>
+                        <Link to={`/${navigation.repoUsername}/${navigation.repoName}`} 
+                        style={{ textDecoration: 'none', color: 'inherit' }}>
+                            {navigation.repoName}
+                        </Link>
+                        {navigation.currentPath.split('/').map((path, index, arr) => {
+                        if (!path) return null;
+                        const fullPath = arr.slice(0, index + 1).join('/');
+                        return (
+                            <Link
+                            key={path}
+                            to={`/${navigation.repoUsername}/${navigation.repoName}/tree/${navigation.repoBranchName}/${fullPath}`}
+                            style={{ textDecoration: 'none', color: 'inherit' }}
+                            >
+                            {path}
+                            </Link>
+                        );
+                        })}
                     </Breadcrumbs>     
                 </Box>
                 <Box sx={{ display: 'flex', flexGrow: 1, width: '100%' }}>

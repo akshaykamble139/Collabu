@@ -96,8 +96,8 @@ const FileViewerPage = () => {
   if (fileData?.type === 'text') {
     return (
       <Box sx={{ py: 4 }}>
-        <Typography variant="h5" sx={{ mb: 2 }}>{fileData.fileName}</Typography>
-        <Paper sx={{ p: 3, whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+        <Typography variant="h5" sx={{ mb: 2, fontWeight: '500' }}>{fileData.fileName}</Typography>
+        <Paper sx={{ p: 3, whiteSpace: 'pre-wrap', fontFamily: 'monospace', backgroundColor: '#f9fafb' }}>
           {fileData.content}
         </Paper>
       </Box>
@@ -108,11 +108,11 @@ const FileViewerPage = () => {
   if (fileData?.type === 'image') {
     return (
       <Box sx={{ py: 4 }}>
-        <Typography variant="h5" sx={{ mb: 2 }}>{fileData.fileName}</Typography>
+        <Typography variant="h5" sx={{ mb: 2, fontWeight: '500' }}>{fileData.fileName}</Typography>
         <img
           src={`data:${fileData.mimeType};base64,${fileData.base64Content}`}
           alt={fileData.fileName}
-          style={{ maxWidth: '100%' }}
+          style={{ maxWidth: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}
         />
       </Box>
     );
@@ -122,7 +122,7 @@ const FileViewerPage = () => {
   if (fileData?.type === 'binary') {
     return (
       <Box sx={{ py: 4 }}>
-        <Typography variant="h5" sx={{ mb: 2 }}>{fileData.fileName}</Typography>
+        <Typography variant="h5" sx={{ mb: 2, fontWeight: '500' }}>{fileData.fileName}</Typography>
         <Typography variant="body1">
           {fileData.mimeType.startsWith('text/') ? 'Large Text File' : 'Binary File'}
           {fileData.size && ` (${(fileData.size / 1024).toFixed(1)} KB)`}
@@ -131,7 +131,7 @@ const FileViewerPage = () => {
           variant="contained"
           href={fileData.downloadUrl}
           download={fileData.fileName}
-          sx={{ mt: 2 }}
+          sx={{ mt: 2, backgroundColor: '#3b82f6', '&:hover': { backgroundColor: '#2563eb' } }}
         >
           Download {fileData.fileName}
         </Button>

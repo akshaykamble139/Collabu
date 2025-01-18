@@ -40,7 +40,13 @@ class BranchServiceTest {
 
     @InjectMocks
     private BranchService branchService;
-
+    
+    @Mock
+    private BranchCacheService branchCacheService;
+    
+    @Mock
+    private CacheService cacheService;
+    
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
@@ -54,14 +60,17 @@ class BranchServiceTest {
 
     @Test
     void testGetBranchesByRepoId() {
-        List<Branch> branches = new ArrayList<>();
-        Branch branch = new Branch();
+        List<BranchDTO> branches = new ArrayList<>();
+        BranchDTO branch = new BranchDTO();
         branch.setId(5L);
         branch.setName("master");
-        branch.setRepository(new Repository_());
+        branch.setRepositoryName("repo");
         branches.add(branch);
-        when(branchRepository.findByRepositoryId(anyLong())).thenReturn(branches);
 
+        when(cacheService.getRepositoryVisibility(anyLong())).thenReturn(true);
+        
+        when(branchCacheService.findBranchesByRepositoryId(anyLong())).thenReturn(branches);
+        
         List<BranchDTO> result = branchService.getBranchesByRepoId(1L,userDetails);
         assertEquals(1, result.size());
         assertEquals("master", result.get(0).getName());
@@ -92,8 +101,13 @@ class BranchServiceTest {
         branch.setRepository(repo);
         
         
-        BranchDTO branchDTO = branchService.mapEntityToDTO(branch);
-        
+        BranchDTO branchDTO = new BranchDTO();
+        branchDTO.setName(branch.getName());
+        branchDTO.setId(branch.getId());
+        branchDTO.setRepositoryName(branch.getRepository().getName());
+        branchDTO.setParentBranchName("new_master");
+        when(branchCacheService.mapEntityToDTO(any())).thenReturn(branchDTO);
+
         when(branchRepository.existsByRepositoryIdAndName(anyLong(), anyString())).thenReturn(true);
         
         try {
@@ -108,6 +122,8 @@ class BranchServiceTest {
 
         when(branchRepository.save(any())).thenReturn(branch);
 
+        branchDTO.setName("master");
+        when(branchCacheService.createBranchForRepositoryId(any(), anyLong())).thenReturn(branchDTO);
         BranchDTO result = branchService.createBranch(branchDTO,userDetails);
         assertEquals("master", result.getName());
     }
@@ -136,9 +152,14 @@ class BranchServiceTest {
         repo.setForksCount(0L);
         
         branch.setRepository(repo);
+        
+        BranchDTO branchDTO = new BranchDTO();
+        branchDTO.setName(branch.getName());
+        branchDTO.setId(branch.getId());
+        branchDTO.setRepositoryName(branch.getRepository().getName());
                 
         when(branchRepository.findById(anyLong())).thenReturn(Optional.of(branch));
-        
+        when(branchCacheService.mapEntityToDTO(any())).thenReturn(branchDTO);
         BranchDTO result = branchService.getBranchById(1L);
         assertEquals("master", result.getName());
     }

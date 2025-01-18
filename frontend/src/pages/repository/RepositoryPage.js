@@ -81,17 +81,17 @@ const openDeleteDialog = () => {
 
 
   return (
-    <Container maxWidth="lg" sx={{ py: 2 }}>
-      <Breadcrumbs>
+    <Container maxWidth="lg" sx={{ py: 4, px: 3 }}>
+      <Breadcrumbs sx={{ mb: 3 }}>
         <Link href={`/${navigation.repoUsername}/repositories`} underline="hover" color="inherit">
           {navigation.repoUsername}
         </Link>
-        <Typography color="text.primary">{navigation.repoName}</Typography>
+        <Typography color="text.primary" fontWeight="500">{navigation.repoName}</Typography>
       </Breadcrumbs>
       <Tabs
         value={currentTab}
         onChange={(e, newValue) => setCurrentTab(newValue)}
-        sx={{ mb: 3 }}
+        sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
       >
         <Tab icon={<Code size={16} />} label="Code" iconPosition="start" />
         <Tab icon={<Clock size={16} />} label="Commits" iconPosition="start" />

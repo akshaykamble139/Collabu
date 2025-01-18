@@ -17,13 +17,13 @@ const TreeItem = ({ file, depth, isExpanded, onToggle, username, repoName, branc
 
     return (
         <div
-            className="flex items-center w-full hover:bg-gray-50 cursor-pointer py-3 px-4 transition-colors duration-200"
+            className="flex items-center w-full hover:bg-gray-50 cursor-pointer py-2 px-4 transition-colors duration-200"
             style={{ paddingLeft: `${depth * 20 + 16}px` }}
         >
             {file.type === 'folder' && (
                 <div className="w-4 h-4 mr-3 flex items-center justify-center transition-transform duration-200" onClick={onToggle}>
                     {isExpanded ? (
-                        <ChevronDown className="w-4 h-4 text-gray-500 transform rotate-180" />
+                        <ChevronDown className="w-4 h-4 text-gray-500" />
                     ) : (
                         <ChevronRight className="w-4 h-4 text-gray-500" />
                     )}

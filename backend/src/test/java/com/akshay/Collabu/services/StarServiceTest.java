@@ -1,6 +1,7 @@
 package com.akshay.Collabu.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -45,6 +46,9 @@ class StarServiceTest {
 
     @InjectMocks
     private StarService starService;
+    
+    @Mock
+	private StarCacheService starCacheService;
 
     @BeforeEach
     void setUp() {
@@ -113,19 +117,28 @@ class StarServiceTest {
         star.setUser(user);
         star.setRepository(repo);
         
-        StarDTO starDTO = starService.mapEntityToDTO(star);
+        StarDTO starDTO = new StarDTO();
+        starDTO.setOwnerUsername("test");
+    	starDTO.setRepositoryName("TestRepo");
+    	starDTO.setIsActive(false);
+        
+    	when(starCacheService.mapEntityToDTO(star)).thenReturn(starDTO);
 
         when(repositoryRepository.findById(anyLong())).thenReturn(Optional.of(repo));
        
     	when(cacheService.getUserId(anyString())).thenReturn(12345L);
 
+    	when(starCacheService.toggleStarForRepositoryOfOwnerId(anyLong(), anyString(), anyLong())).thenReturn(starDTO);
     	when(starRepository.findByUserIdAndRepositoryId(anyLong(),anyLong())).thenReturn(Optional.of(star));
 
         when(starRepository.save(any())).thenReturn(star);
         
         StarDTO result = starService.toggleStar(user.getUsername(),starDTO);
         assertEquals(false, result.getIsActive());
-        
+
+        starDTO.setIsActive(true);
+    	when(starCacheService.toggleStarForRepositoryOfOwnerId(anyLong(), anyString(), anyLong())).thenReturn(starDTO);
+
         result = starService.toggleStar(user.getUsername(),starDTO);
         assertEquals(true, result.getIsActive());
         
@@ -182,20 +195,27 @@ class StarServiceTest {
         
         star.setUser(user);
         star.setRepository(repo);
+        star.setIsActive(true);
         
-        StarDTO starDTO = starService.mapEntityToDTO(star);
+        StarDTO starDTO = new StarDTO();
+        starDTO.setOwnerUsername("test");
+    	starDTO.setRepositoryName("TestRepo");
+    	starDTO.setIsActive(true);
+        
+    	when(starCacheService.mapEntityToDTO(star)).thenReturn(starDTO);
        
     	when(cacheService.getUserId(anyString())).thenReturn(12345L);
 
     	when(starRepository.findByUserIdAndRepositoryId(anyLong(),anyLong())).thenReturn(Optional.of(star));
         
+    	
         StarDTO result = starService.getStarStatus(user.getUsername(),starDTO);
         assertEquals(true, result.getIsActive());
         
 		when(starRepository.findByUserIdAndRepositoryId(anyLong(),anyLong())).thenReturn(Optional.empty());
 		
         result = starService.getStarStatus(user.getUsername(),starDTO);
-        assertEquals(false, result.getIsActive());    
+        assertNull(result);    
     }
     
 	@Test

@@ -37,6 +37,9 @@ class RepositoryServiceTest {
     
     @Mock
     private CacheService cacheService;
+    
+    @Mock
+    private RepositoryCacheService repositoryCacheService;
 
     @InjectMocks
     private RepositoryService repositoryService;
@@ -66,6 +69,16 @@ class RepositoryServiceTest {
         repo.setStarsCount(0L);
         repo.setForksCount(0L);
         
+        
+        RepositoryDTO repositoryDTO = new RepositoryDTO();
+        repositoryDTO.setId(repo.getId());
+        repositoryDTO.setName(repo.getName());
+        repositoryDTO.setDescription(repo.getDescription());
+        repositoryDTO.setOwnerUsername(repo.getOwner().getUsername());
+        repositoryDTO.setPublicRepositoryOrNot(repo.getVisibility().equals("public"));
+        repositoryDTO.setStarCount(repo.getStarsCount());
+        repositoryDTO.setForkCount(repo.getForksCount());
+        when(repositoryCacheService.mapEntityToDTO(repo)).thenReturn(repositoryDTO);
         
         when(repositoryRepository.findById(anyLong())).thenReturn(Optional.of(repo));
 
@@ -106,7 +119,15 @@ class RepositoryServiceTest {
         repo.setStarsCount(0L);
         repo.setForksCount(0L);
         
-        RepositoryDTO repositoryDTO = repositoryService.mapEntityToDTO(repo);
+        RepositoryDTO repositoryDTO = new RepositoryDTO();
+        repositoryDTO.setId(repo.getId());
+        repositoryDTO.setName(repo.getName());
+        repositoryDTO.setDescription(repo.getDescription());
+        repositoryDTO.setOwnerUsername(repo.getOwner().getUsername());
+        repositoryDTO.setPublicRepositoryOrNot(repo.getVisibility().equals("public"));
+        repositoryDTO.setStarCount(repo.getStarsCount());
+        repositoryDTO.setForkCount(repo.getForksCount());
+        when(repositoryCacheService.mapEntityToDTO(repo)).thenReturn(repositoryDTO);
 
     	when(repositoryRepository.existsByNameAndOwnerId(anyString(),anyLong())).thenReturn(true);
 
@@ -127,6 +148,7 @@ class RepositoryServiceTest {
         
         when(repositoryRepository.save(any())).thenReturn(repo);
         
+        when(repositoryCacheService.createRepositoryForOwnerId(any(), anyLong())).thenReturn(repositoryDTO);
 
         RepositoryDTO result = repositoryService.createRepository(repositoryDTO);
         assertEquals("TestRepo", result.getName());
@@ -160,8 +182,17 @@ class RepositoryServiceTest {
         repo.setStarsCount(0L);
         repo.setForksCount(0L);
         
-        RepositoryDTO repositoryDTO = repositoryService.mapEntityToDTO(repo);
-                        
+        
+        RepositoryDTO repositoryDTO = new RepositoryDTO();
+        repositoryDTO.setId(repo.getId());
+        repositoryDTO.setName(repo.getName());
+        repositoryDTO.setDescription(repo.getDescription());
+        repositoryDTO.setOwnerUsername(repo.getOwner().getUsername());
+        repositoryDTO.setPublicRepositoryOrNot(repo.getVisibility().equals("public"));
+        repositoryDTO.setStarCount(repo.getStarsCount());
+        repositoryDTO.setForkCount(repo.getForksCount());
+        when(repositoryCacheService.mapEntityToDTO(repo)).thenReturn(repositoryDTO);
+        
         when(repositoryRepository.findById(anyLong())).thenReturn(Optional.of(repo));
         
         when(repositoryRepository.save(any())).thenReturn(repo);
@@ -188,7 +219,24 @@ class RepositoryServiceTest {
 			logger.info("Repository doesn't exist for id: {}", 1L);
 		}
 
-        when(repositoryRepository.existsById(anyLong())).thenReturn(true);
+        User user = new User();
+        user.setId(1L);
+        user.setEmail("don@gmail.com");
+        user.setUsername("test");
+        user.setRole("ROLE_USER");
+        user.setIsActive(true);
+        
+        Repository_ repo = new Repository_();
+        repo.setId(1L);
+        repo.setName("TestRepo");
+        repo.setDescription("Description");
+        repo.setOwner(user);
+        repo.setDefaultBranch("master");
+        repo.setIsDeleted(false);
+        repo.setStarsCount(0L);
+        repo.setForksCount(0L);
+        
+        when(repositoryRepository.findById(anyLong())).thenReturn(Optional.of(repo));
 
     	repositoryService.deleteRepository(1L, userDetails);       
     }

@@ -15,7 +15,7 @@ const Header = () => {
   };
 
   return (
-    <AppBar position="static">
+    <AppBar position="static" sx={{ boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}>
       <Toolbar>
         <Typography
           variant="h6"

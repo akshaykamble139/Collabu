@@ -3,8 +3,10 @@ import { store } from "../redux/store";
 import { showNotification } from "../redux/notificationSlice";
 import { logout } from "../redux/userSlice";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
 const instance = axios.create({
-  baseURL: "http://localhost:8080/collabu",
+  baseURL: API_BASE_URL,
 });
 
 // Request Interceptor (Attach Token)

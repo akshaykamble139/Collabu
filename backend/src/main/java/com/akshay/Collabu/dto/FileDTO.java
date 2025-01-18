@@ -43,5 +43,6 @@ public class FileDTO implements Serializable{
     
     private boolean isBinary;
     private String mimeType;
+    private Boolean isEditable = false;
 
 }

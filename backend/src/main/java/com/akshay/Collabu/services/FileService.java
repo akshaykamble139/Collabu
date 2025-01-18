@@ -410,7 +410,7 @@ public class FileService {
         FileVersion lastFileVersion = fileVersions.get(0);
 		
 		Branch branch = file.getBranch();
-		Boolean updatableFileContents = isEditableMimeType(file.getMimeType());
+		Boolean updatableFileContents = fileCacheService.isEditableMimeType(file.getMimeType());
 		
 		Boolean isFileNameChanged = false;
 		Boolean isFileContentsChanged = false;
@@ -474,15 +474,5 @@ public class FileService {
 		} 
     	throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error while updating file");
 	}
-	
-	private boolean isEditableMimeType(String mimeType) {
-        // Define editable MIME types
-        return mimeType != null && (
-            mimeType.startsWith("text/") ||
-            mimeType.equals("application/json") ||
-            mimeType.equals("application/xml") ||
-            mimeType.equals("application/javascript")
-        );
-    }
 
 }

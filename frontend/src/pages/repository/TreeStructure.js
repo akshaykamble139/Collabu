@@ -68,7 +68,7 @@ const TreeStructure = ({ files, username, repoName, branchName, handleFolderClic
   };
 
   return (
-    <div className="w-full max-w-md bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div className="w-full max-w-md bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
       <div className="border-b border-gray-200 bg-gray-50 px-4 py-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-700">Files</h3>
