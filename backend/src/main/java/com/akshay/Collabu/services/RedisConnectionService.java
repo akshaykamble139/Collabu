@@ -19,6 +19,7 @@ public class RedisConnectionService {
             return "PONG".equals(response);
         } catch (Exception e) {
             // Handle exceptions (e.g., Redis is down, network issue)
+        	e.printStackTrace();
             return false;
         }
     }
